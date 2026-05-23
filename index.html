@@ -231,6 +231,19 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 .eff-val{font-size:14px;font-weight:700;color:var(--accent);min-width:70px;text-align:right}
 .eff-sub-r{font-size:10px;color:var(--text-soft);text-align:right}
 
+/* ── BREAKEVEN ── */
+.be-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.be-box{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center}
+.be-val{font-size:22px;font-weight:700;color:var(--primary)}
+.be-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+.be-sub{font-size:11px;color:var(--text-soft);margin-top:4px}
+.be-progress{margin:12px 0}
+.be-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.be-bar-label{font-size:11px;color:var(--text-muted);min-width:100px}
+.be-bar-outer{flex:1;height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.be-bar-inner{height:100%;border-radius:5px}
+.be-bar-val{font-size:11px;font-weight:600;min-width:50px;text-align:right}
+
 /* ── GOWABI ── */
 .gowabi-stat{display:flex;flex-direction:column;gap:2px;padding:12px 14px;background:rgba(108,122,78,.07);border:1px solid rgba(108,122,78,.2);border-radius:var(--radius-sm)}
 .gowabi-val{font-size:20px;font-weight:700;color:var(--accent)}
@@ -424,6 +437,42 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
             </div>
             <div id="gowabi-section"></div>
           </div>
+        </div>
+
+        <!-- ─── DEEP EXPENSE ANALYSIS ─── -->
+        <div style="padding:10px 0 4px">
+          <div class="section-head">🔍 วิเคราะห์ค่าใช้จ่ายเชิงลึก · Deep Cost Analysis</div>
+        </div>
+
+        <!-- Cost KPIs -->
+        <div class="g4" id="cost-kpis"></div>
+
+        <!-- Expense Trend + Fixed vs Variable -->
+        <div class="g2">
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">📈 Expense Trend 3 เดือน</div>
+              <div class="card-sub">ค่ามือ / Fixed / One-time</div>
+            </div>
+            <div class="chart-wrap tall"><canvas id="ch-exp-trend"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">⚖️ Fixed vs Variable Costs</div>
+              <div class="card-sub">พ.ค. 2026</div>
+            </div>
+            <div class="chart-wrap"><canvas id="ch-fixed-var"></canvas></div>
+            <div id="fixed-var-detail" style="margin-top:6px"></div>
+          </div>
+        </div>
+
+        <!-- Break-even Analysis -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">🎯 Break-even Analysis · จุดคุ้มทุน</div>
+            <div class="card-sub">ต้องทำ sessions เท่าไหร่ถึงคุ้มทุน</div>
+          </div>
+          <div id="breakeven-analysis"></div>
         </div>
 
       </div><!-- /finance -->
@@ -669,6 +718,31 @@ const DATA = {
     { cat:"ค่าแรงพนักงาน",       amount:6000,  icon:"👥", color:"#786A5E" },
     { cat:"อื่นๆ",               amount:5601,  icon:"📦", color:"#9C8E80" }
   ],
+  expenseAnalysis: {
+    fixedBase: 42500,
+    variableBase: 97661,
+    costPerSession: 434,
+    varCostPerSession: 303,
+    breakEvenSessions: 134,
+    avgRevenuePerSession: 618,
+    contributionMargin: 315,
+    trend: [
+      { mo:"มี.ค.", therapistPay:94780,  fixed:42500, oneTime:145257 },
+      { mo:"เม.ย.", therapistPay:115015, fixed:42500, oneTime:229037 },
+      { mo:"พ.ค.",  therapistPay:80060,  fixed:42500, oneTime:17601  }
+    ],
+    fixedItems: [
+      { name:"ค่าเช่า", amount:20000, icon:"🏠" },
+      { name:"ค่าน้ำ / ไฟ", amount:8000, icon:"⚡" },
+      { name:"ค่าแรงพนักงาน", amount:6000, icon:"👥" },
+      { name:"Marketing / Platform", amount:8500, icon:"📣" }
+    ],
+    variableItems: [
+      { name:"ค่ามือหมอนวด", amount:80060, icon:"👐", note:"ผันแปรตามจำนวน sessions" },
+      { name:"วัสดุสิ้นเปลือง", amount:12000, icon:"🛒", note:"น้ำมัน บาล์ม ผ้า" },
+      { name:"อื่นๆ", amount:5601, icon:"📦", note:"ค่าใช้จ่ายเบ็ดเตล็ด" }
+    ]
+  },
   memberHealth: [
     { name:"แอ๊ว",  tier:"Silver", credit:875,  lastVisit:"23/05", daysAgo:1,  atRisk:false },
     { name:"นุ๊ก",  tier:"Gold",   credit:2400, lastVisit:"23/05", daysAgo:1,  atRisk:false },
@@ -994,6 +1068,119 @@ function render(){
         ⚠️ ${gb.note}
       </div>
     </div>`;
+
+  // ── DEEP EXPENSE ANALYSIS ──
+  const ea=d.expenseAnalysis;
+  if(ea){
+    // Cost KPIs
+    $('cost-kpis').innerHTML=[
+      {l:'ต้นทุนรวม / session',  v:fmt(ea.costPerSession),        c:'', sub:'ทุก session ต้องแบก ฿'+ea.costPerSession},
+      {l:'ต้นทุนคงที่ / เดือน',  v:fmt(ea.fixedBase),             c:'warn', sub:'จ่ายโดยไม่มีลูกค้า'},
+      {l:'Contribution Margin', v:fmt(ea.contributionMargin),     c:'pos', sub:'กำไรก่อนหักFixed/session'},
+      {l:'Break-even Sessions', v:ea.breakEvenSessions+' sess',   c:'', sub:'ต้องถึงจุดนี้ก่อนมีกำไร'}
+    ].map(k=>`<div class="card sc"><div class="sc-lbl">${k.l}</div><div class="sc-val ${k.c}">${k.v}</div><div class="sc-tag">${k.sub}</div></div>`).join('');
+
+    // Fixed vs Variable detail
+    const fvTotal=ea.fixedBase+ea.variableBase;
+    $('fixed-var-detail').innerHTML=`
+      <div style="margin-top:8px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">⚙️ Fixed (${((ea.fixedBase/fvTotal)*100).toFixed(0)}%)</div>
+        ${ea.fixedItems.map(f=>`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11.5px;border-bottom:1px solid var(--border)">
+          <span>${f.icon}</span><span style="flex:1">${f.name}</span><b>${fmt(f.amount)}</b>
+        </div>`).join('')}
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin:10px 0 6px">📈 Variable (${((ea.variableBase/fvTotal)*100).toFixed(0)}%)</div>
+        ${ea.variableItems.map(v=>`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11.5px;border-bottom:1px solid var(--border)">
+          <span>${v.icon}</span><div style="flex:1"><div>${v.name}</div><div style="font-size:9.5px;color:var(--text-soft)">${v.note}</div></div><b>${fmt(v.amount)}</b>
+        </div>`).join('')}
+      </div>`;
+
+    // Break-even analysis
+    const mayMtdSess=323; const mayDays=23;
+    const dailySess=Math.round(mayMtdSess/mayDays);
+    const beProgress=Math.min(100,(mayMtdSess/ea.breakEvenSessions*100)).toFixed(0);
+    const tgt400Sess=Math.ceil(400000/ea.avgRevenuePerSession);
+    const tgt400Prog=Math.min(100,(mayMtdSess/tgt400Sess*100)).toFixed(0);
+    $('breakeven-analysis').innerHTML=`
+      <div class="be-grid">
+        <div class="be-box">
+          <div class="be-val" style="color:var(--positive)">${ea.breakEvenSessions}</div>
+          <div class="be-lbl">Break-even</div>
+          <div class="be-sub">sessions/เดือน</div>
+        </div>
+        <div class="be-box">
+          <div class="be-val" style="color:var(--accent)">${fmt(ea.avgRevenuePerSession)}</div>
+          <div class="be-lbl">Rev / session</div>
+          <div class="be-sub">เฉลี่ย พ.ค.</div>
+        </div>
+        <div class="be-box">
+          <div class="be-val" style="color:var(--gold)">${fmt(ea.contributionMargin)}</div>
+          <div class="be-lbl">Contribution</div>
+          <div class="be-sub">กำไรก่อน Fixed / session</div>
+        </div>
+      </div>
+      <div class="be-progress">
+        <div class="be-bar-row">
+          <div class="be-bar-label">Break-even (${ea.breakEvenSessions} sess)</div>
+          <div class="be-bar-outer"><div class="be-bar-inner" style="width:${beProgress}%;background:var(--positive)"></div></div>
+          <div class="be-bar-val" style="color:var(--positive)">${mayMtdSess}/${ea.breakEvenSessions}</div>
+        </div>
+        <div class="be-bar-row">
+          <div class="be-bar-label">เป้า ฿400K (${tgt400Sess} sess)</div>
+          <div class="be-bar-outer"><div class="be-bar-inner" style="width:${tgt400Prog}%;background:var(--gold)"></div></div>
+          <div class="be-bar-val" style="color:var(--gold)">${mayMtdSess}/${tgt400Sess}</div>
+        </div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;line-height:1.8;color:var(--text-muted)">
+        💡 <b style="color:var(--text)">สรุป:</b> ต้นทุนคงที่ ฿${(ea.fixedBase/1000).toFixed(0)}K/เดือน · ทุก session สร้าง Contribution ฿${ea.contributionMargin} หลังหักต้นทุนผันแปร<br>
+        📌 ปัจจุบัน ${mayMtdSess} sessions ใน ${mayDays} วัน = <b style="color:var(--accent)">${dailySess} sessions/วัน</b><br>
+        🎯 ถ้าต้องการ ฿400K ต้องทำ <b style="color:var(--primary)">${tgt400Sess} sessions</b> (${Math.ceil(tgt400Sess/30)} sessions/วัน) — ต้องเพิ่มอีก ${tgt400Sess-mayMtdSess} sessions
+      </div>`;
+
+    // Expense Trend Chart
+    dc('ch-exp-trend');
+    charts['ch-exp-trend']=new Chart($('ch-exp-trend'),{
+      type:'bar',
+      data:{
+        labels:ea.trend.map(t=>t.mo),
+        datasets:[
+          {label:'ค่ามือหมอ',  data:ea.trend.map(t=>t.therapistPay), backgroundColor:'rgba(92,61,62,.7)',borderRadius:3,stack:'s'},
+          {label:'Fixed',       data:ea.trend.map(t=>t.fixed),        backgroundColor:'rgba(108,122,78,.6)',borderRadius:3,stack:'s'},
+          {label:'One-time/อื่นๆ',data:ea.trend.map(t=>t.oneTime),   backgroundColor:'rgba(184,89,62,.45)',borderRadius:3,stack:'s'}
+        ]
+      },
+      options:{...CO,
+        scales:{
+          x:{ticks:{color:'rgba(120,106,94,.65)',font:{size:9}},grid:{display:false},stacked:true,border:{display:false}},
+          y:{ticks:{color:'rgba(120,106,94,.65)',font:{size:9},callback:v=>'฿'+(v/1000).toFixed(0)+'K'},
+             grid:{color:'rgba(92,61,62,.06)'},stacked:true,border:{display:false}}
+        },
+        interaction:{mode:'index',intersect:false}
+      }
+    });
+
+    // Fixed vs Variable Donut
+    dc('ch-fixed-var');
+    charts['ch-fixed-var']=new Chart($('ch-fixed-var'),{
+      type:'doughnut',
+      data:{
+        labels:['Fixed','Variable'],
+        datasets:[{
+          data:[ea.fixedBase,ea.variableBase],
+          backgroundColor:['#6C7A4E','#5C3D3E'],
+          borderColor:['#FBF6EA'],borderWidth:2
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{position:'bottom',labels:{color:'rgba(120,106,94,.65)',font:{size:10},padding:12,boxWidth:9}},
+          tooltip:{backgroundColor:'rgba(42,31,29,.95)',titleColor:'#F4ECDE',bodyColor:'rgba(244,236,222,.65)',
+            borderColor:'rgba(244,236,222,.08)',borderWidth:1,
+            callbacks:{label:c=>` ${c.label}: ฿${Number(c.raw).toLocaleString('th-TH')} (${(c.raw/fvTotal*100).toFixed(0)}%)`}}
+        }
+      }
+    });
+  }
 
   // ── CHARTS ──
   const chartMonths=annual.filter(m=>m.revenue>0);
