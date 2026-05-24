@@ -249,16 +249,101 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 .gowabi-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
 .gowabi-note{font-size:11px;color:var(--text-soft);margin-top:2px}
 
-@media(max-width:860px){
-  .app{grid-template-columns:1fr}
-  .sidebar{display:none}
-  .g4{grid-template-columns:1fr 1fr}
-  .span2{grid-column:span 1}
-  .year-grid{grid-template-columns:repeat(3,1fr)}
+/* ── MOBILE OVERLAY ── */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;opacity:0;transition:opacity .25s}
+.mob-overlay.show{display:block;opacity:1}
+
+/* ── MOBILE HEADER (hidden desktop) ── */
+.mob-header{display:none;align-items:center;position:fixed;top:0;left:0;right:0;height:56px;background:var(--primary);padding:0 16px;z-index:95;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.mob-ham{width:36px;height:36px;background:transparent;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;flex-shrink:0;padding:0}
+.mob-ham span{display:block;width:22px;height:2px;background:var(--bg);border-radius:2px;transition:all .2s}
+.mob-ham.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.mob-ham.open span:nth-child(2){opacity:0}
+.mob-ham.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mob-header-title{flex:1;font-size:15px;font-weight:600;color:var(--bg);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mob-live-badge{display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(244,236,222,.75);flex-shrink:0}
+.mob-live-dot{width:5px;height:5px;border-radius:50%;background:#9fcf7a}
+
+/* ── MOBILE BOTTOM NAV ── */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:95;padding:4px 0 env(safe-area-inset-bottom,4px)}
+.mob-nav-inner{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.mob-nav-inner::-webkit-scrollbar{display:none}
+.mob-nav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 12px;background:transparent;border:0;cursor:pointer;flex:1;min-width:54px;font:inherit;color:var(--text-muted);transition:color .15s}
+.mob-nav-btn.active{color:var(--primary)}
+.mob-nav-icon{font-size:18px;line-height:1}
+.mob-nav-label{font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+
+@media(max-width:768px){
+  /* Shell */
+  html,body{height:auto}
+  .app{display:block;min-height:100vh;padding-top:56px;padding-bottom:60px}
+
+  /* Sidebar → fixed drawer */
+  .sidebar{position:fixed;left:-270px;top:0;height:100%;width:260px;z-index:100;transition:left .25s ease;overflow-y:auto;padding:16px 14px}
+  .sidebar.open{left:0}
+
+  /* Main */
+  .main{overflow:visible}
+  .topbar{display:none}
+  .content{padding:12px 12px 16px}
+
+  /* Mobile header & bottom nav */
+  .mob-header{display:flex}
+  .mob-nav{display:block}
+
+  /* Grids */
+  .g4{grid-template-columns:1fr 1fr;gap:10px}
+  .g3{grid-template-columns:1fr 1fr;gap:10px}
+  .g2{grid-template-columns:1fr;gap:10px}
+  .span2,.span3{grid-column:span 1}
+  .year-grid{grid-template-columns:repeat(3,1fr);gap:6px}
+
+  /* Cards */
+  .card{padding:14px 14px}
+
+  /* Hero */
+  .hero-val{font-size:30px}
+  .hero{padding:18px 18px}
+
+  /* Charts */
+  .chart-wrap{height:145px}
+  .chart-wrap.tall{height:175px}
+
+  /* Tables: horizontal scroll */
+  .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px}
+
+  /* Breakeven grid */
+  .be-grid{grid-template-columns:1fr 1fr;gap:8px}
+
+  /* Heatmap */
+  .hmap-wrap{overflow-x:auto}
+
+  /* Year items */
+  .yr-rev{font-size:13px}
+  .yr-det,.yr-pft{font-size:9px}
+  .yr-item{padding:8px 8px}
+
+  /* Section heading */
+  .section-head{font-size:10px}
 }
 </style>
 </head>
 <body>
+<!-- MOBILE OVERLAY -->
+<div class="mob-overlay" id="mob-overlay"></div>
+
+<!-- MOBILE HEADER -->
+<div class="mob-header">
+  <button class="mob-ham" id="mob-ham" onclick="toggleSidebar()" aria-label="เมนู">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="mob-header-title" id="mob-title">ภาพรวม</span>
+  <span class="mob-live-badge"><span class="mob-live-dot"></span><span id="mob-live">–</span></span>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mob-nav" id="mob-nav"></nav>
+
 <div class="app">
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -410,13 +495,13 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
             <div class="card-sub">ข้อมูล ณ วันที่ update ล่าสุด</div>
           </div>
           <div style="overflow-x:auto">
-            <table class="tbl">
+            <div class="tbl-scroll"><table class="tbl">
               <thead><tr>
                 <th>เดือน</th><th class="num">รายรับ</th><th class="num">รายจ่าย</th>
                 <th class="num">ค่ามือ</th><th class="num">กำไรสุทธิ</th><th class="num">Margin</th><th>สถานะ</th>
               </tr></thead>
               <tbody id="fin-tbody"></tbody>
-            </table>
+            </table></div>
           </div>
         </div>
 
@@ -832,10 +917,15 @@ function showPage(key){
   curPage=key;
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   const pg=$('page-'+key);
-  if(pg){pg.classList.add('active');}
+  if(pg){pg.classList.add('active');pg.scrollIntoView({block:'start',behavior:'auto'});}
   const p=PAGES.find(x=>x.key===key);
-  if(p){set('pg-title',p.th);set('pg-en',p.en);}
+  if(p){
+    set('pg-title',p.th);set('pg-en',p.en);
+    const mt=document.getElementById('mob-title');if(mt)mt.textContent=p.th;
+  }
   buildNav();
+  buildMobNav();
+  closeSidebar();
 }
 
 // ── CHART OPTIONS ─────────────────────────────────────────────────────────
@@ -866,7 +956,7 @@ function render(){
   const now=new Date();
   set('side-date',now.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'}));
   set('side-mem',(d.members.total||19)+' คน');
-  set('live-lbl',cm.nameTh||cm.name);
+  set('live-lbl',cm.nameTh||cm.name);const _ml=document.getElementById('mob-live');if(_ml)_ml.textContent=cm.nameTh||cm.name;
   set('upd-lbl','Updated '+d.lastUpdated);
 
   // ── COCKPIT ──
@@ -1543,8 +1633,41 @@ function renderAnalytics(){
     </div>`;
 }
 
+// ── MOBILE NAV ──────────────────────────────────────────────────────────
+function buildMobNav(){
+  const nav=document.getElementById('mob-nav');
+  if(!nav)return;
+  nav.innerHTML='<div class="mob-nav-inner">'+PAGES.map(p=>`
+    <button class="mob-nav-btn${curPage===p.key?' active':''}" onclick="showPage('${p.key}')">
+      <span class="mob-nav-icon">${p.icon}</span>
+      <span class="mob-nav-label">${p.th}</span>
+    </button>`).join('')+'</div>';
+}
+
+function toggleSidebar(){
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('mob-overlay');
+  const ham=document.getElementById('mob-ham');
+  const open=sb.classList.toggle('open');
+  ham.classList.toggle('open',open);
+  if(open){ov.classList.add('show');}
+  else{ov.classList.remove('show');}
+}
+
+function closeSidebar(){
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('mob-overlay');
+  const ham=document.getElementById('mob-ham');
+  sb.classList.remove('open');
+  ov.classList.remove('show');
+  ham.classList.remove('open');
+}
+
+document.getElementById('mob-overlay').addEventListener('click',closeSidebar);
+
 // ── INIT ──────────────────────────────────────────────────────────────────
 buildNav();
+buildMobNav();
 render();
 renderToday();
 renderAnalytics();
