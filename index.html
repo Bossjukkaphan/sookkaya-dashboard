@@ -719,7 +719,14 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 </div><!-- /app -->
 
 <script>
-// ── DATA (synced from Google Sheets — May 2026) ──────────────────────────
+// ── GOOGLE APPS SCRIPT URL ────────────────────────────────────────────────
+// วิธีตั้งค่า:
+//   1. เปิด Google Sheet → Extensions → Apps Script
+//   2. วางโค้ดจากไฟล์ sookkaya_apps_script.gs แล้ว Deploy → Web app
+//   3. Copy URL ที่ได้มาวางตรงนี้
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+// ── DATA (fallback / hardcoded baseline — updated live when APPS_SCRIPT_URL is set) ──
 const DATA = {
   lastUpdated: "24 May 2026",
   today: {
@@ -885,6 +892,121 @@ const DATA = {
     { mo:"ธ.ค.",yr:"25",revenue:0,expenses:0,therapistPay:0,netProfit:0,profitPct:0,isCur:false,status:"–" }
   ]
 };
+
+// ── LIVE DATA LOADER ─────────────────────────────────────────────────────
+// ดึงข้อมูลจาก Google Apps Script แล้ว patch DATA object ก่อน render
+async function loadLiveData() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('YOUR_')) {
+    console.info('📊 Apps Script URL ยังไม่ได้ตั้งค่า — ใช้ข้อมูล hardcoded');
+    return false;
+  }
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const live = await res.json();
+    if (live.error) throw new Error(live.error);
+
+    // ── patch today ──────────────────────────────────────────────
+    if (live.today) {
+      const t = live.today;
+      DATA.today.date         = t.date        || DATA.today.date;
+      DATA.today.sessions     = t.sessions    || 0;
+      DATA.today.revenue      = t.revenue     || 0;
+      DATA.today.volume       = t.revenue     || 0;  // gross sales
+      DATA.today.discount     = t.discount    || 0;
+      DATA.today.cashReceived = t.netRevenue  || t.bankFlow || 0;
+      DATA.today.netRevenue   = t.netRevenue  || 0;
+      DATA.today.therapistPay = t.therapistPay|| 0;
+      DATA.today.grossProfit  = t.grossProfit || 0;
+      DATA.today.avgPerSession= t.sessions > 0
+        ? Math.round((t.netRevenue || 0) / t.sessions) : 0;
+    }
+
+    // ── patch session items table ────────────────────────────────
+    if (live.sessions && live.sessions.length > 0) {
+      DATA.today.sessionItems = live.sessions.map((s, i) => ({
+        n:          i + 1,
+        time:       s.time       || '–',
+        client:     s.customer   || '',
+        therapist:  s.therapist  || '',
+        service:    s.service    || '',
+        price:      s.netAmount  || s.listPrice || 0,
+        pay:        s.payment    || '',
+        disc:       s.discount   || 0,
+        tag:        s.memberStatus || (s.promo ? s.promo : '')
+      }));
+    } else {
+      DATA.today.sessionItems = [];
+    }
+
+    // ── patch payment breakdown ──────────────────────────────────
+    if (live.payments && live.payments.length > 0) {
+      const iconMap = {
+        'โอน':'📲','qr':'📲','qr code':'📲',
+        'บัตร':'💳','credit':'💳','บัตรเครดิต':'💳',
+        'เงินสด':'💵','cash':'💵',
+        'member':'🏅','credit member':'🏅',
+        'gowabi':'🌿'
+      };
+      DATA.today.payments = live.payments.map(p => {
+        const key = (p.method || '').toLowerCase();
+        let icon = '💰';
+        for (const k in iconMap) { if (key.includes(k)) { icon = iconMap[k]; break; } }
+        return { icon, label: p.method, amount: p.amount };
+      });
+    }
+
+    // ── patch therapist performance ──────────────────────────────
+    if (live.therapists && live.therapists.length > 0) {
+      DATA.today.therapistPerf = live.therapists.map(t => ({
+        name:     t.name,
+        sessions: t.sessions,
+        revenue:  t.revenue,
+        pay:      t.therapistPay,
+        payNote:  'ค่ามือ ' + fmt(t.therapistPay),
+        insured:  t.therapistPay === 500  // 500 = guaranteed minimum
+      }));
+    }
+
+    // ── patch top services ───────────────────────────────────────
+    if (live.services && live.services.length > 0) {
+      DATA.today.topServices = live.services.map(s => ({
+        name:  s.service,
+        count: s.count,
+        total: s.revenue
+      }));
+    }
+
+    // ── patch MTD ────────────────────────────────────────────────
+    if (live.mtd) {
+      const m = live.mtd;
+      DATA.today.mtd.sessions     = m.sessions     || 0;
+      DATA.today.mtd.cashReceived = m.netRevenue   || 0;
+      DATA.today.mtd.netRevenue   = m.netRevenue   || 0;
+      DATA.today.mtd.therapistPay = m.therapistPay || 0;
+      DATA.today.mtd.grossProfit  = m.grossProfit  || 0;
+      DATA.today.mtd.volume       = m.revenue      || 0;
+    }
+
+    // ── update lastUpdated ───────────────────────────────────────
+    if (live.generatedAt) {
+      const d = new Date(live.generatedAt);
+      DATA.lastUpdated = d.toLocaleString('th-TH', {
+        timeZone:'Asia/Bangkok', hour12:false,
+        day:'numeric', month:'short', year:'numeric',
+        hour:'2-digit', minute:'2-digit'
+      });
+    }
+
+    console.info('✅ Live data loaded from Apps Script:', live.generatedAt);
+    return true;
+
+  } catch (err) {
+    console.warn('⚠️ ดึงข้อมูล live ไม่สำเร็จ — ใช้ข้อมูล fallback:', err.message);
+    return false;
+  }
+}
 
 // ── UTILS ─────────────────────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
@@ -1670,9 +1792,30 @@ document.getElementById('mob-overlay').addEventListener('click',closeSidebar);
 // ── INIT ──────────────────────────────────────────────────────────────────
 buildNav();
 buildMobNav();
-render();
+render();          // render ด้วย hardcoded data ก่อนเพื่อให้โหลดเร็ว
 renderToday();
 renderAnalytics();
+
+// ดึง live data แล้ว re-render (ถ้า URL ตั้งค่าแล้ว)
+loadLiveData().then(ok => {
+  if (ok) {
+    render();
+    renderToday();
+    renderAnalytics();
+    // แสดง badge "LIVE" ใน header
+    const badge = document.createElement('span');
+    badge.textContent = '● LIVE';
+    badge.style.cssText = 'font-size:10px;font-weight:700;color:#4caf50;' +
+      'background:rgba(76,175,80,.12);padding:2px 7px;border-radius:20px;' +
+      'border:1px solid rgba(76,175,80,.3);margin-left:8px;vertical-align:middle;' +
+      'letter-spacing:.5px;';
+    const titleEl = document.getElementById('pg-title');
+    if (titleEl && !document.getElementById('live-badge')) {
+      badge.id = 'live-badge';
+      titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+    }
+  }
+});
 </script>
 </body>
 </html>
