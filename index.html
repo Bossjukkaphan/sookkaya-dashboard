@@ -921,7 +921,7 @@ async function loadLiveData() {
       DATA.today.revenue      = t.revenue     || 0;
       DATA.today.volume       = t.revenue     || 0;  // gross sales
       DATA.today.discount     = t.discount    || 0;
-      DATA.today.cashReceived = t.netRevenue  || t.bankFlow || 0;
+      DATA.today.cashReceived = t.bankFlow    || t.netRevenue || 0;  // bankFlow = actual cash, netRevenue = fallback
       DATA.today.netRevenue   = t.netRevenue  || 0;
       DATA.today.therapistPay = t.therapistPay|| 0;
       DATA.today.grossProfit  = t.grossProfit || 0;
@@ -984,16 +984,7 @@ async function loadLiveData() {
       }));
     }
 
-    // ── patch MTD ────────────────────────────────────────────────
-    if (live.mtd) {
-      const m = live.mtd;
-      DATA.today.mtd.sessions     = m.sessions     || 0;
-      DATA.today.mtd.cashReceived = m.netRevenue   || 0;
-      DATA.today.mtd.netRevenue   = m.netRevenue   || 0;
-      DATA.today.mtd.therapistPay = m.therapistPay || 0;
-      DATA.today.mtd.grossProfit  = m.grossProfit  || 0;
-      DATA.today.mtd.volume       = m.revenue      || 0;
-    }
+    // ── patch MTD (handled below with days — first block removed) ──
 
     // ── patch analytics (heatmap, serviceMix, therapistEff, discountROI) ──
     if (live.analytics) {
@@ -1006,6 +997,8 @@ async function loadLiveData() {
       }
       if (a.therapistEff && a.therapistEff.length > 0) {
         DATA.analytics.therapistEff = a.therapistEff;
+        // ← sync therapist name list for Team tab
+        DATA.therapists = a.therapistEff.map(t => t.name);
       }
       if (a.discountROI && a.discountROI.length > 0) {
         DATA.analytics.discountROI = a.discountROI;
@@ -1075,6 +1068,34 @@ async function loadLiveData() {
             ? Math.round(live.mtd.grossProfit / live.mtd.revenue * 1000) / 10 : 0;
         }
       }
+    }
+
+    // ── CRITICAL: sync DATA.currentMonth from updated annual ─────
+    // (Cockpit + Team tab render from currentMonth — must stay in sync)
+    const _curAnn = DATA.annual.find(m => m.isCur);
+    if (_curAnn) {
+      DATA.currentMonth.revenue      = _curAnn.revenue;
+      DATA.currentMonth.therapistPay = _curAnn.therapistPay;
+      // Only update profit if no manual expense data (expenses===0 → sheet-derived only)
+      if (DATA.currentMonth.expenses === 0) {
+        DATA.currentMonth.netProfit = _curAnn.netProfit;
+        DATA.currentMonth.profitPct = _curAnn.profitPct;
+      }
+    }
+    if (live.mtd) {
+      DATA.currentMonth.cashReceived = live.mtd.netRevenue || 0;
+    }
+
+    // ── CRITICAL: recalculate DATA.ytd from annual (current year) ─
+    // (Finance tab YTD cards read from DATA.ytd)
+    const _curYear = new Date().getFullYear();
+    const _ytdEntries = DATA.annual.filter(m => {
+      const yr = parseInt('20' + m.yr); return yr === _curYear && m.revenue > 0;
+    });
+    if (_ytdEntries.length > 0) {
+      DATA.ytd.revenue      = _ytdEntries.reduce((s, m) => s + m.revenue, 0);
+      DATA.ytd.therapistPay = _ytdEntries.reduce((s, m) => s + m.therapistPay, 0);
+      DATA.ytd.netProfit    = _ytdEntries.reduce((s, m) => s + m.netProfit, 0);
     }
 
     // ── update lastUpdated ───────────────────────────────────────
