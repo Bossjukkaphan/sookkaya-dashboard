@@ -989,6 +989,88 @@ async function loadLiveData() {
       DATA.today.mtd.volume       = m.revenue      || 0;
     }
 
+    // ── patch analytics (heatmap, serviceMix, therapistEff, discountROI) ──
+    if (live.analytics) {
+      const a = live.analytics;
+      if (a.heatmap && a.heatmap.data && a.heatmap.data.length === 7) {
+        DATA.analytics.heatmap = a.heatmap;
+      }
+      if (a.serviceMix && a.serviceMix.length > 0) {
+        DATA.analytics.serviceMix = a.serviceMix;
+      }
+      if (a.therapistEff && a.therapistEff.length > 0) {
+        DATA.analytics.therapistEff = a.therapistEff;
+      }
+      if (a.discountROI && a.discountROI.length > 0) {
+        DATA.analytics.discountROI = a.discountROI;
+      }
+    }
+
+    // ── patch annual (monthly grid from สรุปยอดขายรายวัน) ──────────
+    if (live.annual && live.annual.length > 0) {
+      // Merge: preserve expense/netProfit from hardcoded for months that have it,
+      // but update revenue/therapistPay/sessions from live data
+      live.annual.forEach(function(lm) {
+        const idx = DATA.annual.findIndex(hm => hm.mo === lm.mo && hm.yr === lm.yr);
+        if (idx >= 0) {
+          // Update revenue and therapistPay; keep hardcoded expenses/netProfit if available
+          DATA.annual[idx].revenue      = lm.revenue;
+          DATA.annual[idx].therapistPay = lm.therapistPay;
+          DATA.annual[idx].sessions     = lm.sessions;
+          if (DATA.annual[idx].expenses === 0) {
+            // No expense data in hardcoded either → use approx from sheet
+            DATA.annual[idx].netProfit  = lm.netProfit;
+            DATA.annual[idx].profitPct  = lm.profitPct;
+            DATA.annual[idx].status     = lm.status;
+          }
+        } else if (lm.revenue > 0) {
+          DATA.annual.unshift(lm); // new month not in hardcoded list
+        }
+      });
+      // Re-sort newest first
+      DATA.annual.sort((a, b) => {
+        const ay = parseInt('20' + a.yr), by = parseInt('20' + b.yr);
+        const am = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'].indexOf(a.mo);
+        const bm = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'].indexOf(b.mo);
+        return (by*12+bm) - (ay*12+am);
+      });
+    }
+
+    // ── patch member health ──────────────────────────────────────
+    if (live.memberHealth && live.memberHealth.length > 0) {
+      DATA.memberHealth = live.memberHealth;
+    }
+    if (live.members && live.members.length > 0) {
+      DATA.members.total = live.members.length;
+    }
+
+    // ── patch MTD (extended with days count for break-even) ───────
+    if (live.mtd) {
+      const m = live.mtd;
+      DATA.today.mtd.sessions     = m.sessions     || 0;
+      DATA.today.mtd.cashReceived = m.netRevenue   || 0;
+      DATA.today.mtd.netRevenue   = m.netRevenue   || 0;
+      DATA.today.mtd.therapistPay = m.therapistPay || 0;
+      DATA.today.mtd.grossProfit  = m.grossProfit  || 0;
+      DATA.today.mtd.volume       = m.revenue      || 0;
+      DATA.today.mtd.days         = m.days         || 0;
+    }
+
+    // ── update current-month in annual with live MTD ─────────────
+    if (live.mtd && live.mtd.revenue > 0) {
+      const curIdx = DATA.annual.findIndex(m => m.isCur);
+      if (curIdx >= 0) {
+        DATA.annual[curIdx].revenue      = live.mtd.revenue;
+        DATA.annual[curIdx].therapistPay = live.mtd.therapistPay;
+        DATA.annual[curIdx].sessions     = live.mtd.sessions;
+        if (DATA.annual[curIdx].expenses === 0) {
+          DATA.annual[curIdx].netProfit  = live.mtd.grossProfit;
+          DATA.annual[curIdx].profitPct  = live.mtd.revenue > 0
+            ? Math.round(live.mtd.grossProfit / live.mtd.revenue * 1000) / 10 : 0;
+        }
+      }
+    }
+
     // ── update lastUpdated ───────────────────────────────────────
     if (live.generatedAt) {
       const d = new Date(live.generatedAt);
@@ -1100,7 +1182,8 @@ function render(){
   // Target progress
   const tgt=d.target?.monthly||400000;
   const tgtPct=Math.min(100,(cm.revenue/tgt*100));
-  const daysInMonth=31; const daysPassed=23; const daysLeft=daysInMonth-daysPassed;
+  const _now=new Date(); const daysInMonth=new Date(_now.getFullYear(),_now.getMonth()+1,0).getDate();
+  const daysPassed=DATA.today.mtd.days||_now.getDate(); const daysLeft=Math.max(1,daysInMonth-daysPassed);
   const needed=Math.max(0,tgt-cm.revenue);
   const neededPerDay=daysLeft>0?Math.round(needed/daysLeft):0;
   $('h-target-bar').style.width=tgtPct.toFixed(1)+'%';
@@ -1307,9 +1390,10 @@ function render(){
         </div>`).join('')}
       </div>`;
 
-    // Break-even analysis
-    const mayMtdSess=323; const mayDays=23;
-    const dailySess=Math.round(mayMtdSess/mayDays);
+    // Break-even analysis — use live MTD data when available
+    const mayMtdSess=DATA.today.mtd.sessions||323;
+    const mayDays=DATA.today.mtd.days||new Date().getDate();
+    const dailySess=mayDays>0?Math.round(mayMtdSess/mayDays):0;
     const beProgress=Math.min(100,(mayMtdSess/ea.breakEvenSessions*100)).toFixed(0);
     const tgt400Sess=Math.ceil(400000/ea.avgRevenuePerSession);
     const tgt400Prog=Math.min(100,(mayMtdSess/tgt400Sess*100)).toFixed(0);
