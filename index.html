@@ -214,8 +214,13 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 .hmap-wrap{overflow-x:auto;margin-top:8px}
 .hmap-inner{display:grid;min-width:600px}
 .hm-label{font-size:9px;color:var(--text-soft);display:flex;align-items:center;justify-content:center;padding:2px}
-.hm-cell{border-radius:3px;height:24px;transition:background .2s}
+.hm-cell{border-radius:3px;height:24px;transition:background .2s;cursor:pointer;position:relative}
+.hm-cell:hover{outline:2px solid var(--primary);outline-offset:1px;z-index:1}
 .hm-day{font-size:10px;color:var(--text-muted);display:flex;align-items:center;padding-right:6px;font-weight:500}
+/* Heatmap custom tooltip */
+#hm-tooltip{position:fixed;pointer-events:none;background:var(--primary);color:var(--bg);padding:6px 10px;border-radius:7px;font-size:11px;line-height:1.5;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.22);z-index:9999;opacity:0;transform:translateY(-4px);transition:opacity .12s,transform .12s}
+#hm-tooltip.show{opacity:1;transform:translateY(0)}
+#hm-tooltip b{font-size:14px;display:block}
 
 /* ── THERAPIST EFFICIENCY ── */
 .eff-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
@@ -684,6 +689,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
               <div class="card-sub">ความหนาแน่นการจอง (ชั่วโมง × วัน)</div>
             </div>
             <div class="hmap-wrap"><div id="heatmap-grid" class="hmap-inner"></div></div>
+            <div id="hm-tooltip"></div>
           </div>
           <div class="card">
             <div class="card-head">
@@ -1745,13 +1751,15 @@ function renderAnalytics(){
     grid.style.gap='3px';
     let html='<div></div>'; // top-left empty
     hm.hours.forEach(h=>{ html+=`<div class="hm-label">${h}</div>`; });
+    const dayFull=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
     hm.days.forEach((day,di)=>{
       html+=`<div class="hm-day">${day}</div>`;
-      hm.data[di].forEach(v=>{
+      hm.data[di].forEach((v,ci)=>{
         const intensity=maxVal>0?v/maxVal:0;
         const alpha=(0.07+intensity*0.85).toFixed(2);
-        const title=`${day} ${hm.hours[hm.data[di].indexOf(v)]}:00 · ${v} sessions`;
-        html+=`<div class="hm-cell" style="background:rgba(92,61,62,${alpha})" title="${title}"></div>`;
+        html+=`<div class="hm-cell" style="background:rgba(92,61,62,${alpha})"
+          data-d="${dayFull[di]}" data-h="${hm.hours[ci]}:00" data-v="${v}"
+          onmouseenter="showHmTip(event,this)" onmouseleave="hideHmTip()"></div>`;
       });
     });
     grid.innerHTML=html;
@@ -1771,7 +1779,7 @@ function renderAnalytics(){
       labels:sm.map(m=>m.mo),
       datasets:an.serviceMixLabels.map((lbl,i)=>({
         label:lbl,
-        data:sm.map(m=>m.data[i]),
+        data:sm.map(m=>{const tot=m.data.reduce((s,v)=>s+v,0);return tot>0?Math.round(m.data[i]/tot*100):0;}),
         backgroundColor:smColors[i],
         borderRadius:3,
         stack:'s'
@@ -1813,7 +1821,10 @@ function renderAnalytics(){
 
   // ── DISCOUNT ROI ──
   $('discount-roi').innerHTML=an.discountROI.map(d=>{
-    const roi=d.disc>0?((d.net-d.gross+d.disc)/d.disc*100).toFixed(0):'–';
+    // อัตราส่วนลดต่อยอดขาย (discount% of gross)
+    const discRate=d.gross>0?(d.disc/d.gross*100).toFixed(1):'–';
+    // avg net per session
+    const avgNet=d.sessions>0?Math.round(d.net/d.sessions):0;
     const isGowabi=d.type==='Gowabi';
     return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -1831,13 +1842,13 @@ function renderAnalytics(){
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px;color:var(--text-muted)">
         <div>ยอดขาย<br><b style="color:var(--text)">${fmt(d.gross)}</b></div>
         <div>ส่วนลด<br><b style="color:var(--negative)">${d.disc>0?'-'+fmt(d.disc):'฿0'}</b></div>
-        <div>คุ้มทุน<br><b style="color:${isGowabi?'var(--negative)':'var(--accent)'}">${isGowabi?'❌ ขาดทุน':roi+'% ROI'}</b></div>
+        <div>${isGowabi?'ร้านได้รับ':'เฉลี่ย/session'}<br><b style="color:${isGowabi?'var(--negative)':'var(--accent)'}">${isGowabi?'฿0 ❌':fmt(avgNet)}</b></div>
       </div>
       ${d.note?`<div style="margin-top:6px;font-size:10.5px;color:var(--text-soft);padding:4px 8px;background:var(--surface-2);border-radius:5px">⚠️ ${d.note}</div>`:''}
     </div>`;
   }).join('')+`
     <div style="padding-top:10px;font-size:11px;color:var(--text-soft)">
-      💡 Member Discount ให้ ROI สูงที่สุด — ช่วยรักษาลูกค้าระยะยาว
+      💡 Gowabi: ร้านไม่ได้รับเงิน — รายได้ทั้งหมดตกที่ Gowabi | Member Discount: เฉลี่ยต่อ session จาก net ที่เก็บได้จริง
     </div>`;
 }
 
@@ -1872,6 +1883,25 @@ function closeSidebar(){
 }
 
 document.getElementById('mob-overlay').addEventListener('click',closeSidebar);
+
+// ── HEATMAP TOOLTIP ──────────────────────────────────────────────────────
+const _hmTip=document.getElementById('hm-tooltip');
+function showHmTip(e,el){
+  const v=parseInt(el.dataset.v||0);
+  const label=v===0?'ไม่มีการนัด':`<b>${v}</b> session${v>1?'s':''}`;
+  _hmTip.innerHTML=`${el.dataset.d} · ${el.dataset.h}<br>${label}`;
+  _hmTip.classList.add('show');
+  _posHmTip(e);
+}
+function _posHmTip(e){
+  const pad=12;
+  let x=e.clientX+pad, y=e.clientY-46;
+  if(x+160>window.innerWidth) x=e.clientX-160-pad;
+  if(y<0) y=e.clientY+pad;
+  _hmTip.style.left=x+'px';
+  _hmTip.style.top=y+'px';
+}
+function hideHmTip(){ _hmTip.classList.remove('show'); }
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 buildNav();
