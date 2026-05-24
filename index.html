@@ -1086,6 +1086,73 @@ async function loadLiveData() {
       DATA.currentMonth.cashReceived = live.mtd.netRevenue || 0;
     }
 
+    // ── LIVE EXPENSES: patch from ต้นทุน + รายจ่าย sheets ───────────
+    // live.expenses = { fixedTotal, variableTotal, total, breakdown:[{category,amount,type}] }
+    if (live.expenses && live.expenses.total > 0) {
+      const liveFixedAndVar = live.expenses.total; // fixed + variable (NOT therapistPay)
+      const liveTherapistPay = (live.mtd && live.mtd.therapistPay) || DATA.currentMonth.therapistPay || 0;
+      // Total cost = therapistPay + all other expenses
+      const totalExpenses = liveTherapistPay + liveFixedAndVar;
+
+      DATA.currentMonth.expenses = totalExpenses;
+      DATA.currentMonth.netProfit = DATA.currentMonth.revenue - totalExpenses;
+      DATA.currentMonth.profitPct = DATA.currentMonth.revenue > 0
+        ? Math.round(DATA.currentMonth.netProfit / DATA.currentMonth.revenue * 1000) / 10
+        : 0;
+
+      // Sync into annual current month so charts + annual grid update
+      const _curAnnExp = DATA.annual.findIndex(m => m.isCur);
+      if (_curAnnExp >= 0) {
+        DATA.annual[_curAnnExp].expenses  = totalExpenses;
+        DATA.annual[_curAnnExp].netProfit = DATA.currentMonth.netProfit;
+        DATA.annual[_curAnnExp].profitPct = DATA.currentMonth.profitPct;
+        DATA.annual[_curAnnExp].status    = DATA.currentMonth.netProfit >= 0 ? '✅' : '⚠️';
+      }
+
+      // Rebuild expenseBreakdown from live data
+      // Map category names to icons/colors
+      const ICON_MAP = {
+        'ค่ามือ': { icon:'👐', color:'#5C3D3E' },
+        'therapist': { icon:'👐', color:'#5C3D3E' },
+        'ค่าเช่า': { icon:'🏠', color:'#6C7A4E' },
+        'ค่าน้ำ': { icon:'💡', color:'#6C7A4E' },
+        'ค่าไฟ': { icon:'💡', color:'#6C7A4E' },
+        'ค่าน้ำ+ค่าไฟ': { icon:'💡', color:'#6C7A4E' },
+        'marketing': { icon:'📣', color:'#8B6B4A' },
+        'โฆษณา': { icon:'📣', color:'#8B6B4A' },
+        'ค่าผลิตภัณฑ์': { icon:'🧴', color:'#4A6B6C' },
+        'สินค้า': { icon:'🧴', color:'#4A6B6C' },
+        'เงินเดือน': { icon:'💼', color:'#6B5B4A' },
+        'default': { icon:'📋', color:'#8B7B6B' }
+      };
+      function getIconColor(catName) {
+        const lower = catName.toLowerCase();
+        for (const key in ICON_MAP) {
+          if (key !== 'default' && lower.includes(key)) return ICON_MAP[key];
+        }
+        return ICON_MAP['default'];
+      }
+
+      // Always keep therapistPay as first row
+      const newBreakdown = [
+        { cat:'ค่ามือหมอนวด', amount: liveTherapistPay, icon:'👐', color:'#5C3D3E' }
+      ];
+      (live.expenses.breakdown || []).forEach(item => {
+        const ic = getIconColor(item.category || '');
+        newBreakdown.push({ cat: item.category, amount: item.amount, icon: ic.icon, color: ic.color });
+      });
+      DATA.expenseBreakdown = newBreakdown;
+    }
+
+    // ── 7-DAY ROLLING AVERAGE (avg7) ─────────────────────────────
+    // live.today.avg7 = { revenuePerDay, sessionsPerDay, profitPerDay, daysUsed }
+    if (live.today && live.today.avg7 && live.today.avg7.revenuePerDay > 0) {
+      const la = live.today.avg7;
+      DATA.today.avg7.cashPerDay      = la.revenuePerDay;
+      DATA.today.avg7.sessionsPerDay  = la.sessionsPerDay;
+      DATA.today.avg7.profitPerDay    = la.profitPerDay;
+    }
+
     // ── CRITICAL: recalculate DATA.ytd from annual (current year) ─
     // (Finance tab YTD cards read from DATA.ytd)
     const _curYear = new Date().getFullYear();
@@ -1096,6 +1163,8 @@ async function loadLiveData() {
       DATA.ytd.revenue      = _ytdEntries.reduce((s, m) => s + m.revenue, 0);
       DATA.ytd.therapistPay = _ytdEntries.reduce((s, m) => s + m.therapistPay, 0);
       DATA.ytd.netProfit    = _ytdEntries.reduce((s, m) => s + m.netProfit, 0);
+      const ytdExpSum = _ytdEntries.reduce((s, m) => s + (m.expenses || 0), 0);
+      if (ytdExpSum > 0) DATA.ytd.expenses = ytdExpSum;
     }
 
     // ── update lastUpdated ───────────────────────────────────────
