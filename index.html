@@ -4,7 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sookkaya — Owner Dashboard</title>
+<!-- v8.0 — Simple PIN auth (replaces Firebase) -->
+<meta name="app-version" content="v8.0">
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" crossorigin="anonymous"></script>
+<style id="sk-auth-style">
+  body.sk-auth-pending > *:not(#sk-login-overlay):not(script){visibility:hidden!important}
+  #sk-login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#f4f1ec 0%,#e8e4dc 100%);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  #sk-login-overlay.sk-hidden{display:none}
+  .sk-login-card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.1);padding:40px;max-width:360px;width:100%;text-align:center}
+  .sk-login-card h1{font-size:24px;color:#2a4a3a;margin:0 0 8px;font-weight:600}
+  .sk-login-card .sk-sub{color:#6b6657;font-size:14px;margin-bottom:28px}
+  .sk-pin-dots{display:flex;gap:14px;justify-content:center;margin-bottom:28px}
+  .sk-pin-dot{width:16px;height:16px;border-radius:50%;background:#e0dcd1;transition:background .15s}
+  .sk-pin-dot.filled{background:#2a4a3a}
+  .sk-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto}
+  .sk-num-btn{padding:18px 0;font-size:22px;font-weight:500;background:#f4f1ec;border:none;border-radius:12px;cursor:pointer;font-family:inherit;color:#2a4a3a;transition:background .1s,transform .08s}
+  .sk-num-btn:hover{background:#ede4d2}
+  .sk-num-btn:active{background:#d9cbb1;transform:scale(.95)}
+  .sk-num-btn.sk-del{font-size:18px;color:#6b6657}
+  .sk-login-status{margin-top:20px;font-size:13px;color:#6b6657;min-height:18px}
+  .sk-login-status.sk-error{color:#c0392b;animation:sk-shake .3s}
+  .sk-login-footer{margin-top:24px;font-size:12px;color:#999}
+  #sk-logout-btn{position:fixed;bottom:16px;right:16px;z-index:9999;background:rgba(42,74,58,.9);color:#fff;border:none;padding:8px 14px;border-radius:20px;font-size:12px;cursor:pointer;backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+  @keyframes sk-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -56,6 +80,9 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 
 /* ── GRID ── */
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+@media(max-width:1280px){.g5{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.g5{grid-template-columns:repeat(2,1fr);gap:10px}}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .span2{grid-column:span 2}
@@ -77,10 +104,11 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 .delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px}
 .delta.up{background:rgba(95,122,74,.25);color:#9fcf7a}
 .delta.down{background:rgba(184,89,62,.25);color:#f0a080}
-.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)}
-.hero-kv{padding:10px 0 4px;display:flex;flex-direction:column;gap:3px}
-.hero-kv:first-child{padding-right:16px;border-right:1px solid rgba(255,255,255,.12)}
-.hero-kv:last-child{padding-left:16px}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)}
+.hero-kv{padding:10px 14px 4px;display:flex;flex-direction:column;gap:3px}
+.hero-kv:first-child{padding-left:0}
+.hero-kv:last-child{padding-right:0}
+.hero-kv+.hero-kv{border-left:1px solid rgba(255,255,255,.12)}
 .hero-k{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
 .hero-v{font-size:18px;font-weight:600;letter-spacing:-.01em}
 
@@ -335,7 +363,116 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 }
 </style>
 </head>
-<body>
+<body class="sk-auth-pending">
+
+<!-- ===== LOGIN OVERLAY (PIN) ===== -->
+<div id="sk-login-overlay">
+  <div class="sk-login-card">
+    <h1>🌿 Sookkaya</h1>
+    <p class="sk-sub">ใส่รหัส 4 หลัก</p>
+    <div class="sk-pin-dots">
+      <div class="sk-pin-dot" id="d0"></div>
+      <div class="sk-pin-dot" id="d1"></div>
+      <div class="sk-pin-dot" id="d2"></div>
+      <div class="sk-pin-dot" id="d3"></div>
+    </div>
+    <div class="sk-numpad">
+      <button class="sk-num-btn" onclick="skPin('1')">1</button>
+      <button class="sk-num-btn" onclick="skPin('2')">2</button>
+      <button class="sk-num-btn" onclick="skPin('3')">3</button>
+      <button class="sk-num-btn" onclick="skPin('4')">4</button>
+      <button class="sk-num-btn" onclick="skPin('5')">5</button>
+      <button class="sk-num-btn" onclick="skPin('6')">6</button>
+      <button class="sk-num-btn" onclick="skPin('7')">7</button>
+      <button class="sk-num-btn" onclick="skPin('8')">8</button>
+      <button class="sk-num-btn" onclick="skPin('9')">9</button>
+      <button class="sk-num-btn" style="visibility:hidden"></button>
+      <button class="sk-num-btn" onclick="skPin('0')">0</button>
+      <button class="sk-num-btn sk-del" onclick="skDel()">⌫</button>
+    </div>
+    <div class="sk-login-status" id="sk-status"></div>
+    <div class="sk-login-footer">✦ Sookkaya Thai Massage ✦</div>
+  </div>
+</div>
+
+<!-- ===== AUTH SCRIPT — PIN v8.0 ===== -->
+<script>
+  const SK_PIN = '1234';
+  const SK_KEY = 'sk_auth_v8';
+  let _pinBuf = '';
+
+  function skUpdateDots(){
+    for(let i=0;i<4;i++){
+      document.getElementById('d'+i).classList.toggle('filled', i < _pinBuf.length);
+    }
+  }
+  function skStatus(msg, type){
+    const el = document.getElementById('sk-status');
+    el.textContent = msg;
+    el.className = 'sk-login-status' + (type ? ' sk-'+type : '');
+  }
+  function skShowApp(){
+    document.body.classList.remove('sk-auth-pending');
+    document.getElementById('sk-login-overlay').classList.add('sk-hidden');
+    // Add logout button
+    if(!document.getElementById('sk-logout-btn')){
+      const b = document.createElement('button');
+      b.id = 'sk-logout-btn';
+      b.textContent = '⏻ ออก';
+      b.onclick = function(){
+        if(confirm('ออกจากระบบ?')){
+          try{ sessionStorage.removeItem(SK_KEY); }catch(e){}
+          location.reload();
+        }
+      };
+      document.body.appendChild(b);
+    }
+  }
+  function skPin(digit){
+    if(_pinBuf.length >= 4) return;
+    _pinBuf += digit;
+    skUpdateDots();
+    if(_pinBuf.length === 4){
+      if(_pinBuf === SK_PIN){
+        skStatus('✓', 'success');
+        try{ sessionStorage.setItem(SK_KEY,'1'); }catch(e){}
+        setTimeout(skShowApp, 300);
+      } else {
+        skStatus('รหัสไม่ถูกต้อง', 'error');
+        setTimeout(()=>{ _pinBuf=''; skUpdateDots(); skStatus(''); }, 800);
+      }
+    }
+  }
+  function skDel(){
+    _pinBuf = _pinBuf.slice(0,-1);
+    skUpdateDots();
+    skStatus('');
+  }
+
+  // Check session on load
+  (function(){
+    try{
+      if(sessionStorage.getItem(SK_KEY)==='1'){
+        skShowApp(); return;
+      }
+    }catch(e){}
+    // Show login
+    document.body.classList.add('sk-auth-pending');
+  })();
+
+  // Keyboard support
+  document.addEventListener('keydown', function(e){
+    if(document.getElementById('sk-login-overlay').classList.contains('sk-hidden')) return;
+    if(e.key >= '0' && e.key <= '9') skPin(e.key);
+    else if(e.key === 'Backspace') skDel();
+  });
+
+
+
+
+
+</script>
+
 <!-- MOBILE OVERLAY -->
 <div class="mob-overlay" id="mob-overlay"></div>
 
@@ -388,7 +525,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
         <!-- Hero + 2 SCs -->
         <div class="g4">
           <div class="card hero span2" id="hero-card">
-            <div class="hero-eye">รายรับรวมเดือนนี้ · MTD Revenue</div>
+            <div class="hero-eye">Net Revenue เดือนนี้ · MTD</div>
             <div class="hero-val" id="h-rev">–</div>
             <div class="hero-row">
               <span class="delta" id="h-delta"></span>
@@ -402,6 +539,10 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
               <div class="hero-kv">
                 <div class="hero-k">Margin</div>
                 <div class="hero-v" id="h-margin">–</div>
+              </div>
+              <div class="hero-kv">
+                <div class="hero-k">Cash In</div>
+                <div class="hero-v" id="h-cashin" style="color:var(--gold)">–</div>
               </div>
             </div>
             <!-- Target progress -->
@@ -435,19 +576,19 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
         <!-- YTD scorecards -->
         <div class="g4">
           <div class="card sc">
-            <div class="sc-lbl">รายรับ YTD</div>
+            <div class="sc-lbl">Net Revenue YTD</div>
             <div class="sc-val" id="sc-ytd-rev">–</div>
-            <div class="sc-tag">สะสมปีนี้</div>
+            <div class="sc-tag">รับรู้รายได้สะสมปีนี้</div>
           </div>
           <div class="card sc">
-            <div class="sc-lbl">กำไร YTD</div>
+            <div class="sc-lbl">กำไรสุทธิ YTD</div>
             <div class="sc-val" id="sc-ytd-pft">–</div>
             <div class="sc-tag">สะสมปีนี้</div>
           </div>
           <div class="card sc">
-            <div class="sc-lbl">เงินสดรับจริง</div>
+            <div class="sc-lbl">Cash In เดือนนี้</div>
             <div class="sc-val" id="sc-cash">–</div>
-            <div class="sc-tag">เดือนนี้ (incl. TopUp)</div>
+            <div class="sc-tag">เงินเข้าจริง (incl. Top-up)</div>
           </div>
           <div class="card sc">
             <div class="sc-lbl">สมาชิกทั้งหมด</div>
@@ -479,6 +620,16 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
             <div class="card-sub" id="annual-sub">–</div>
           </div>
           <div class="year-grid" id="year-grid"></div>
+        </div>
+
+        <!-- 🆕 v2.9: Member Credit Alert -->
+        <div class="card" id="card-credit-alert">
+          <div class="card-head">
+            <div class="card-title">💳 Member Credit Alert</div>
+            <div class="card-sub" id="credit-alert-sub">–</div>
+          </div>
+          <div class="g4" id="credit-alert-kpis" style="margin-top:6px"></div>
+          <div id="credit-alert-list" style="margin-top:10px"></div>
         </div>
 
       </div><!-- /cockpit -->
@@ -517,7 +668,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
           <div class="card">
             <div class="card-head">
               <div class="card-title">สรุปค่าใช้จ่ายแยกหมวด</div>
-              <div class="card-sub" id="exp-sub">พ.ค. 2026</div>
+              <div class="card-sub" id="exp-sub">–</div>
             </div>
             <div id="exp-breakdown"></div>
           </div>
@@ -550,7 +701,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
           <div class="card">
             <div class="card-head">
               <div class="card-title">⚖️ Fixed vs Variable Costs</div>
-              <div class="card-sub">พ.ค. 2026</div>
+              <div class="card-sub" id="fv-sub">–</div>
             </div>
             <div class="chart-wrap"><canvas id="ch-fixed-var"></canvas></div>
             <div id="fixed-var-detail" style="margin-top:6px"></div>
@@ -588,24 +739,89 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 
       <!-- PAGE: MEMBERS -->
       <div class="page" id="page-members">
+        <!-- KPI Cards -->
         <div class="g4" id="mem-kpis"></div>
-        <div class="g2">
+
+        <!-- 🆕 v3.0: 3 Insight Cards (VIP + Liability + Revenue Contribution) -->
+        <div class="g3" style="margin-top:14px">
           <div class="card">
             <div class="card-head">
-              <div class="card-title">Member Health Dashboard</div>
-              <div class="card-sub">เรียงตามวันที่เข้ารับบริการล่าสุด</div>
+              <div class="card-title">🏆 Top 10 VIP</div>
+              <div class="card-sub">เรียงตาม Lifetime Value (รวมยอดใช้บริการ)</div>
             </div>
-            <div id="mem-health-list" style="margin-top:4px"></div>
+            <div id="mem-vip-list" style="margin-top:6px"></div>
           </div>
           <div class="card">
             <div class="card-head">
-              <div class="card-title">Credit Summary</div>
-              <div class="card-sub">สรุปเครดิตรวมทุกระดับ</div>
+              <div class="card-title">🏦 Total Liability</div>
+              <div class="card-sub">Credit ที่ร้านต้องบริการให้</div>
             </div>
-            <div id="mem-credit-chart" style="margin-top:4px">
-              <div class="chart-wrap"><canvas id="ch-mem-credit"></canvas></div>
-            </div>
+            <div id="mem-liability" style="margin-top:6px"></div>
           </div>
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">💸 Revenue จาก Member</div>
+              <div class="card-sub">% รายได้จาก Member 6 เดือนล่าสุด</div>
+            </div>
+            <div class="chart-wrap" style="margin-top:6px"><canvas id="ch-mem-rev-contrib"></canvas></div>
+            <div id="mem-rev-contrib-sub" style="font-size:11px;color:var(--text-soft);margin-top:6px;text-align:center"></div>
+          </div>
+        </div>
+
+        <!-- 🆕 v3.0: Master Member Table -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-head">
+            <div class="card-title">📋 Master Member List</div>
+            <div class="card-sub" id="mem-master-sub">ครบทุก Member · เรียงตาม Balance (น้อยสุดก่อน)</div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px">
+            <input id="mem-search" placeholder="🔍 ค้นหาชื่อ..." style="padding:6px 10px;border:1px solid var(--border-2);border-radius:6px;background:var(--surface-2);color:var(--text);flex:1;min-width:140px;font-size:12px">
+            <select id="mem-filter-tier" style="padding:6px 10px;border:1px solid var(--border-2);border-radius:6px;background:var(--surface-2);color:var(--text);font-size:12px">
+              <option value="">ทุก Tier</option>
+              <option value="Gold">🥇 Gold</option>
+              <option value="Silver">🥈 Silver</option>
+            </select>
+            <select id="mem-filter-status" style="padding:6px 10px;border:1px solid var(--border-2);border-radius:6px;background:var(--surface-2);color:var(--text);font-size:12px">
+              <option value="">ทุก Status</option>
+              <option value="critical">🔴 หมดแล้ว</option>
+              <option value="low">🟠 ใกล้หมด</option>
+              <option value="warning">🟡 ต่ำ</option>
+              <option value="ok">🟢 ปกติ</option>
+            </select>
+            <select id="mem-sort" style="padding:6px 10px;border:1px solid var(--border-2);border-radius:6px;background:var(--surface-2);color:var(--text);font-size:12px">
+              <option value="balance">Balance น้อย→มาก</option>
+              <option value="totalSpent">Lifetime Value มาก→น้อย</option>
+              <option value="lastVisit">เข้าล่าสุด</option>
+              <option value="pctUsed">%ใช้ไป มาก→น้อย</option>
+            </select>
+          </div>
+          <div style="overflow-x:auto;margin-top:8px">
+            <table id="mem-master-table" style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:680px">
+              <thead>
+                <tr style="border-bottom:2px solid var(--border-2);text-align:left;color:var(--text-muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em">
+                  <th style="padding:8px 6px">Member</th>
+                  <th style="padding:8px 6px;text-align:right">Topup รวม</th>
+                  <th style="padding:8px 6px;text-align:right">ใช้ไป</th>
+                  <th style="padding:8px 6px;text-align:right">คงเหลือ</th>
+                  <th style="padding:8px 6px;text-align:right">%ใช้</th>
+                  <th style="padding:8px 6px;text-align:right">Visits</th>
+                  <th style="padding:8px 6px;text-align:right">Spent</th>
+                  <th style="padding:8px 6px">เข้าล่าสุด</th>
+                  <th style="padding:8px 6px;text-align:center">Status</th>
+                </tr>
+              </thead>
+              <tbody id="mem-master-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Credit Summary Chart (เดิม) -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-head">
+            <div class="card-title">📊 Credit Summary by Tier</div>
+            <div class="card-sub">สรุปเครดิตรวมทุกระดับ</div>
+          </div>
+          <div class="chart-wrap" style="margin-top:6px"><canvas id="ch-mem-credit"></canvas></div>
         </div>
       </div><!-- /members -->
 
@@ -613,7 +829,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
       <div class="page" id="page-today">
 
         <!-- Daily KPIs -->
-        <div class="g4" id="today-kpis"></div>
+        <div class="g5" id="today-kpis"></div>
 
         <!-- Sessions + Payment channels -->
         <div class="g2">
@@ -662,7 +878,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
         <!-- MTD accumulation -->
         <div class="card">
           <div class="card-head">
-            <div class="card-title">สะสม พ.ค. 2026</div>
+            <div class="card-title" id="today-mtd-title">สะสมเดือนนี้</div>
             <div class="card-sub" id="today-mtd-sub">–</div>
           </div>
           <div class="g4" id="today-mtd-kpis" style="margin-top:4px"></div>
@@ -705,7 +921,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
           <div class="card">
             <div class="card-head">
               <div class="card-title">⚡ Therapist Efficiency</div>
-              <div class="card-sub">รายได้ต่อ session (พ.ค. 2026)</div>
+              <div class="card-sub" id="eff-sub">รายได้ต่อ session</div>
             </div>
             <div id="therapist-eff-list" style="margin-top:4px"></div>
           </div>
@@ -730,173 +946,63 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 //   1. เปิด Google Sheet → Extensions → Apps Script
 //   2. วางโค้ดจากไฟล์ sookkaya_apps_script.gs แล้ว Deploy → Web app
 //   3. Copy URL ที่ได้มาวางตรงนี้
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwX40oO9rk8vgX7L_CwQlyRlCgYfHri-0GjyIJta-NLThU3fGsSEBjWHGr13f_Gh3Zw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMRWExMULwuwIl3DhPShLoXMApo330gLX5cXYMLUhr-mALkRAo6znJIbjdwKLrUqya/exec';
 
-// ── DATA (fallback / hardcoded baseline — updated live when APPS_SCRIPT_URL is set) ──
+// ── DATA (live-first — patched จาก Apps Script; ไม่มี hardcoded ของเดือนใดเดือนหนึ่ง) ──
 const DATA = {
-  lastUpdated: "24 May 2026",
+  lastUpdated: "—",
   today: {
-    date: "23 พ.ค. 2569 (ศ.)",
-    sessions: 10,
-    customers: 8,
-    volume: 7740,
-    discount: 1090,
-    cashReceived: 6650,
-    netRevenue: 6525,
-    therapistPay: 2730,
-    grossProfit: 3920,
+    date: "—",
+    sessions: 0,
+    customers: 0,
+    volume: 0,
+    discount: 0,
+    cashReceived: 0,
+    netRevenue: 0,
+    therapistPay: 0,
+    grossProfit: 0,
     expenses: 0,
-    avgPerSession: 665,
-    avg7RevPerSession: 735,
-    sessionItems: [
-      {n:1, time:"10:45", client:"เกรช",    therapist:"เกด",  service:"นวดแก้ออฟฟิศซินโดรม 90 นาที",          price:1090, pay:"QR Code",       disc:0,   tag:""},
-      {n:2, time:"13:28", client:"นุ๊ก",    therapist:"แพท",  service:"นวดไทยด้วยบาล์ม / น้ำมัน 120 นาที",    price:750,  pay:"QR Code",       disc:0,   tag:""},
-      {n:3, time:"14:25", client:"คิว",     therapist:"หยง",  service:"นวดน้ำมันอโรมา 90 นาที",               price:990,  pay:"บัตรเครดิต",    disc:0,   tag:""},
-      {n:4, time:"14:42", client:"แอ๊ว",    therapist:"รัน",  service:"นวดไทยด้วยบาล์ม / น้ำมัน 120 นาที",    price:750,  pay:"Member Credit", disc:125, tag:"Silver"},
-      {n:5, time:"15:40", client:"สา",      therapist:"โจ",   service:"นวดฝ่าเท้า 60 นาที",                   price:390,  pay:"QR Code",       disc:0,   tag:""},
-      {n:6, time:"16:30", client:"Bow",     therapist:"เกด",  service:"นวดไทยด้วยบาล์ม / น้ำมัน 120 นาที",    price:750,  pay:"QR Code",       disc:0,   tag:""},
-      {n:7, time:"17:58", client:"นีนี่",   therapist:"รัน",  service:"นวดแก้ออฟฟิศซินโดรม 90 นาที",          price:0,    pay:"Gowabi",        disc:0,   tag:"Gowabi"},
-      {n:8, time:"20:23", client:"มาย",     therapist:"หยง",  service:"นวดแก้ออฟฟิศซินโดรม 60 นาที",          price:790,  pay:"QR Code",       disc:0,   tag:""},
-      {n:9, time:"–",     client:"สา",      therapist:"ไล",   service:"นวดฝ่าเท้า 60 นาที",                   price:390,  pay:"QR Code",       disc:0,   tag:""},
-      {n:10,time:"–",     client:"Bow",     therapist:"แพท",  service:"นวดไทยด้วยบาล์ม / น้ำมัน 120 นาที",    price:750,  pay:"QR Code",       disc:0,   tag:""}
-    ],
-    payments: [
-      {icon:"📲", label:"โอน / QR Code",    amount:4910},
-      {icon:"💳", label:"บัตรเครดิต",        amount:990},
-      {icon:"💵", label:"เงินสด",            amount:0},
-      {icon:"🏅", label:"Member Credit",     amount:750}
-    ],
-    therapistPerf: [
-      {name:"รัน",  sessions:2, revenue:750,  pay:690, payNote:"฿650 + request ฿40", insured:false},
-      {name:"แพท",  sessions:2, revenue:1500, pay:640, payNote:"ค่ามือ ฿640",         insured:false},
-      {name:"ไล",   sessions:1, revenue:390,  pay:500, payNote:"ประกัน 🛡",            insured:true},
-      {name:"โจ",   sessions:1, revenue:390,  pay:500, payNote:"ประกัน 🛡",            insured:true},
-      {name:"เกด",  sessions:2, revenue:1840, pay:650, payNote:"ค่ามือ ฿650",         insured:false},
-      {name:"หยง",  sessions:2, revenue:1780, pay:500, payNote:"ประกัน 🛡",            insured:true}
-    ],
-    topServices: [
-      {name:"นวดไทยด้วยบาล์ม / น้ำมัน 120 นาที",  count:4, total:3000},
-      {name:"นวดแก้ออฟฟิศซินโดรม 90 นาที",         count:2, total:1090},
-      {name:"นวดฝ่าเท้า 60 นาที",                  count:2, total:780},
-      {name:"นวดน้ำมันอโรมา 90 นาที",               count:1, total:990},
-      {name:"นวดแก้ออฟฟิศซินโดรม 60 นาที",         count:1, total:790}
-    ],
-    prevWeek: { date:"16/05/2026", sessions:16, cashReceived:10700, grossProfit:6950 },
-    avg7: { sessionsPerDay:12.7, cashPerDay:9341, profitPerDay:6031 },
+    avgPerSession: 0,
+    avg7RevPerSession: 0,
+    sessionItems: [],
+    payments: [],
+    therapistPerf: [],
+    topServices: [],
+    prevWeek: null,
+    avg7: { sessionsPerDay:0, cashPerDay:0, profitPerDay:0 },
     mtd: {
-      days: 23,
-      sessions: 323,
-      volume: 239470,
-      cashReceived: 199750,
-      netRevenue: 193915,
-      therapistPay: 80060,
-      grossProfit: 119690
+      days: 0, sessions: 0, volume: 0,
+      cashReceived: 0, netRevenue: 0, therapistPay: 0, grossProfit: 0
     }
   },
   currentMonth: {
-    name: "May 2026", nameTh: "พ.ค. 2569",
-    revenue: 199750, expenses: 140161, therapistPay: 80060,
-    netProfit: 53754, profitPct: 27.7, cashReceived: 224740
+    name: "", nameTh: "",
+    revenue: 0, expenses: 0, therapistPay: 0,
+    netProfit: 0, profitPct: 0, cashReceived: 0
   },
   ytd: {
-    revenue: 684222, expenses: 809250, therapistPay: 303100,
-    netProfit: -125028, cashReceived: 740172
+    revenue: 0, expenses: 0, therapistPay: 0,
+    netProfit: 0, cashReceived: 0
   },
-  members: { total: 19 },
+  members: { total: 0 },
   target: { monthly: 400000 },
-  gowabi: {
-    mayCount: 18,
-    mayTherapistCost: 6300,
-    note: "Gowabi จ่ายค่ามือหมอโดยตรง — ไม่มีรายรับเงินสดเข้าร้าน"
-  },
-  expenseBreakdown: [
-    { cat:"ค่ามือหมอนวด",       amount:80060, icon:"👐", color:"#5C3D3E" },
-    { cat:"ค่าเช่า & ค่าน้ำไฟ",  amount:28000, icon:"🏠", color:"#6C7A4E" },
-    { cat:"วัสดุสิ้นเปลือง",     amount:12000, icon:"🛒", color:"#C9A96E" },
-    { cat:"Marketing & Gowabi",  amount:8500,  icon:"📣", color:"#7A5859" },
-    { cat:"ค่าแรงพนักงาน",       amount:6000,  icon:"👥", color:"#786A5E" },
-    { cat:"อื่นๆ",               amount:5601,  icon:"📦", color:"#9C8E80" }
-  ],
-  expenseAnalysis: {
-    fixedBase: 42500,
-    variableBase: 97661,
-    costPerSession: 434,
-    varCostPerSession: 303,
-    breakEvenSessions: 134,
-    avgRevenuePerSession: 618,
-    contributionMargin: 315,
-    trend: [
-      { mo:"มี.ค.", therapistPay:94780,  fixed:42500, oneTime:145257 },
-      { mo:"เม.ย.", therapistPay:115015, fixed:42500, oneTime:229037 },
-      { mo:"พ.ค.",  therapistPay:80060,  fixed:42500, oneTime:17601  }
-    ],
-    fixedItems: [
-      { name:"ค่าเช่า", amount:20000, icon:"🏠" },
-      { name:"ค่าน้ำ / ไฟ", amount:8000, icon:"⚡" },
-      { name:"ค่าแรงพนักงาน", amount:6000, icon:"👥" },
-      { name:"Marketing / Platform", amount:8500, icon:"📣" }
-    ],
-    variableItems: [
-      { name:"ค่ามือหมอนวด", amount:80060, icon:"👐", note:"ผันแปรตามจำนวน sessions" },
-      { name:"วัสดุสิ้นเปลือง", amount:12000, icon:"🛒", note:"น้ำมัน บาล์ม ผ้า" },
-      { name:"อื่นๆ", amount:5601, icon:"📦", note:"ค่าใช้จ่ายเบ็ดเตล็ด" }
-    ]
-  },
-  memberHealth: [
-    { name:"แอ๊ว",  tier:"Silver", credit:875,  lastVisit:"23/05", daysAgo:1,  atRisk:false },
-    { name:"นุ๊ก",  tier:"Gold",   credit:2400, lastVisit:"23/05", daysAgo:1,  atRisk:false },
-    { name:"คิว",   tier:"Silver", credit:1200, lastVisit:"23/05", daysAgo:1,  atRisk:false },
-    { name:"พิม",   tier:"Gold",   credit:3600, lastVisit:"18/05", daysAgo:6,  atRisk:false },
-    { name:"นก",    tier:"Silver", credit:500,  lastVisit:"12/05", daysAgo:12, atRisk:false },
-    { name:"ตาล",   tier:"Gold",   credit:1800, lastVisit:"10/05", daysAgo:14, atRisk:false },
-    { name:"บีม",   tier:"Silver", credit:250,  lastVisit:"05/05", daysAgo:19, atRisk:false },
-    { name:"เจน",   tier:"Gold",   credit:4200, lastVisit:"28/04", daysAgo:26, atRisk:true  },
-    { name:"ปาย",   tier:"Silver", credit:750,  lastVisit:"25/04", daysAgo:29, atRisk:true  },
-    { name:"มิ้น",  tier:"Gold",   credit:0,    lastVisit:"20/04", daysAgo:34, atRisk:true  }
-  ],
+  gowabi: null,
+  expenseBreakdown: [],
+  expenseAnalysis: null,
+  memberHealth: [],
   analytics: {
     heatmap: {
       hours: ["10","11","12","13","14","15","16","17","18","19","20","21","22"],
       days:  ["จ.","อ.","พ.","พฤ.","ศ.","ส.","อา."],
-      data: [
-        [2,1,3,2,4,6,7,5,4,3,2,1,0],
-        [1,2,2,3,5,7,8,6,5,4,3,2,1],
-        [2,1,3,2,4,5,6,5,4,3,2,1,0],
-        [1,2,2,3,4,6,7,5,4,3,2,1,1],
-        [3,2,4,3,5,7,8,7,6,5,3,2,1],
-        [4,3,5,4,6,8,9,8,7,6,4,3,2],
-        [3,2,4,3,5,7,8,6,5,4,3,2,1]
-      ]
+      data: [[0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0]]
     },
-    serviceMix: [
-      { mo:"มี.ค.", data:[45,25,10,20] },
-      { mo:"เม.ย.", data:[40,30,15,15] },
-      { mo:"พ.ค.",  data:[40,28,16,16] }
-    ],
+    serviceMix: [],
     serviceMixLabels: ["บาล์ม/น้ำมัน","อโรมา","นวดเท้า","ออฟฟิศ"],
-    therapistEff: [
-      { name:"รัน",  sessions:54, revenue:43200 },
-      { name:"แพท",  sessions:52, revenue:41600 },
-      { name:"ไล",   sessions:50, revenue:35000 },
-      { name:"หยง",  sessions:55, revenue:49500 },
-      { name:"โจ",   sessions:48, revenue:33600 },
-      { name:"เกด",  sessions:64, revenue:57600 }
-    ],
-    discountROI: [
-      { type:"Member Discount", sessions:30, gross:25000, disc:3750, net:21250, icon:"🏅" },
-      { type:"Gowabi",          sessions:18, gross:14220, disc:0,    net:0,     icon:"🌿", note:"ร้านไม่รับเงิน" },
-      { type:"Promo / อื่นๆ",   sessions:8,  gross:5600,  disc:1200, net:4400,  icon:"🎟️" }
-    ]
+    therapistEff: [],
+    discountROI: []
   },
-  therapists: ["รัน","แพท","ไล","หยง","โจ","เกด"],
-  annual: [
-    { mo:"พ.ค.",yr:"26",revenue:199750,expenses:140161,therapistPay:80060,netProfit:53754,profitPct:27.7,isCur:true,status:"✅" },
-    { mo:"เม.ย.",yr:"26",revenue:319230,expenses:386552,therapistPay:115015,netProfit:-71087,profitPct:-22.5,isCur:false,status:"⚠️" },
-    { mo:"มี.ค.",yr:"26",revenue:174842,expenses:282537,therapistPay:94780,netProfit:-107695,profitPct:-61.6,isCur:false,status:"⚠️" },
-    { mo:"ก.พ.",yr:"26",revenue:0,expenses:0,therapistPay:0,netProfit:0,profitPct:0,isCur:false,status:"–" },
-    { mo:"ม.ค.",yr:"26",revenue:0,expenses:0,therapistPay:0,netProfit:0,profitPct:0,isCur:false,status:"–" },
-    { mo:"ธ.ค.",yr:"25",revenue:0,expenses:0,therapistPay:0,netProfit:0,profitPct:0,isCur:false,status:"–" }
-  ]
+  therapists: [],
+  annual: []   // live 100% — patch จาก Apps Script
 };
 
 // ── LIVE DATA LOADER ─────────────────────────────────────────────────────
@@ -908,9 +1014,37 @@ async function loadLiveData() {
   }
 
   try {
-    const res = await fetch(APPS_SCRIPT_URL);
+    // ⚡ Cache-buster: force browser & CDN to fetch fresh data every time
+    // (mobile Safari & LINE browser cache API responses aggressively)
+    const url = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.includes('?') ? '&' : '?') + 't=' + Date.now();
+    const res = await fetch(url, {
+      cache: 'no-store',       // Skip HTTP cache
+      credentials: 'omit'      // Don't send cookies (avoids ITP issues)
+    });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const live = await res.json();
+    if (live.error) throw new Error(live.error);
+    // ⚡ บันทึก cache หลังยืนยันว่าไม่มี error
+    _saveCache(live);
+    _applyLiveData(live);
+    return true;
+  } catch (err) {
+    console.warn('⚠️ ดึงข้อมูล live ไม่สำเร็จ — ใช้ข้อมูล fallback:', err.message);
+    // Show visible error notification for mobile users
+    try {
+      const notif = document.createElement('div');
+      notif.style.cssText = 'position:fixed;top:60px;left:16px;right:16px;background:#f39c12;color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:9998;box-shadow:0 4px 12px rgba(0,0,0,.2);text-align:center';
+      notif.innerHTML = '⚠️ โหลดข้อมูลไม่สำเร็จ · <a href="#" onclick="location.reload();return false" style="color:#fff;text-decoration:underline">ลองใหม่</a>';
+      document.body.appendChild(notif);
+      setTimeout(()=>notif.remove(), 8000);
+    } catch(e){}
+    return false;
+  }
+}
+
+// ── APPLY LIVE DATA (patch DATA object ด้วย JSON จาก Apps Script) ─────────
+// แยกออกมาเพื่อให้ทั้ง loadLiveData() และ cache path เรียกได้
+function _applyLiveData(live) {
     if (live.error) throw new Error(live.error);
 
     // ── patch today ──────────────────────────────────────────────
@@ -1005,39 +1139,20 @@ async function loadLiveData() {
       }
     }
 
-    // ── patch annual (monthly grid from สรุปยอดขายรายวัน) ──────────
+    // ── patch annual (REPLACE 100% จาก live — ไม่มี hardcoded merge) ──
     if (live.annual && live.annual.length > 0) {
-      // Merge: preserve expense/netProfit from hardcoded for months that have it,
-      // but update revenue/therapistPay/sessions from live data
-      live.annual.forEach(function(lm) {
-        const idx = DATA.annual.findIndex(hm => hm.mo === lm.mo && hm.yr === lm.yr);
-        if (idx >= 0) {
-          // Update revenue and therapistPay; keep hardcoded expenses/netProfit if available
-          DATA.annual[idx].revenue      = lm.revenue;
-          DATA.annual[idx].therapistPay = lm.therapistPay;
-          DATA.annual[idx].sessions     = lm.sessions;
-          if (DATA.annual[idx].expenses === 0) {
-            // No expense data in hardcoded either → use approx from sheet
-            DATA.annual[idx].netProfit  = lm.netProfit;
-            DATA.annual[idx].profitPct  = lm.profitPct;
-            DATA.annual[idx].status     = lm.status;
-          }
-        } else if (lm.revenue > 0) {
-          DATA.annual.unshift(lm); // new month not in hardcoded list
-        }
-      });
-      // Re-sort newest first
-      DATA.annual.sort((a, b) => {
-        const ay = parseInt('20' + a.yr), by = parseInt('20' + b.yr);
-        const am = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'].indexOf(a.mo);
-        const bm = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'].indexOf(b.mo);
-        return (by*12+bm) - (ay*12+am);
-      });
+      DATA.annual = live.annual.slice();   // replace ทั้งก้อน
+    } else {
+      DATA.annual = [];
     }
 
     // ── patch member health ──────────────────────────────────────
     if (live.memberHealth && live.memberHealth.length > 0) {
       DATA.memberHealth = live.memberHealth;
+    }
+    // 🆕 v2.9: patch member credit balance + alert
+    if (live.memberCredit) {
+      DATA.memberCredit = live.memberCredit;
     }
     if (live.members && live.members.length > 0) {
       DATA.members.total = live.members.length;
@@ -1055,93 +1170,66 @@ async function loadLiveData() {
       DATA.today.mtd.days         = m.days         || 0;
     }
 
-    // ── update current-month in annual with live MTD ─────────────
-    if (live.mtd && live.mtd.revenue > 0) {
-      const curIdx = DATA.annual.findIndex(m => m.isCur);
-      if (curIdx >= 0) {
-        DATA.annual[curIdx].revenue      = live.mtd.revenue;
-        DATA.annual[curIdx].therapistPay = live.mtd.therapistPay;
-        DATA.annual[curIdx].sessions     = live.mtd.sessions;
-        if (DATA.annual[curIdx].expenses === 0) {
-          DATA.annual[curIdx].netProfit  = live.mtd.grossProfit;
-          DATA.annual[curIdx].profitPct  = live.mtd.revenue > 0
-            ? Math.round(live.mtd.grossProfit / live.mtd.revenue * 1000) / 10 : 0;
-        }
-      }
-    }
-
-    // ── CRITICAL: sync DATA.currentMonth from updated annual ─────
-    // (Cockpit + Team tab render from currentMonth — must stay in sync)
+    // ── 🆕 v2.7: sync currentMonth จาก live.annual (ที่มาจากชีท `สรุปประจำปี`)
+    // annual ถูก replace 100% ด้วย live.annual แล้ว → ใช้ตัวที่ isCur ได้เลย
     const _curAnn = DATA.annual.find(m => m.isCur);
     if (_curAnn) {
-      DATA.currentMonth.revenue      = _curAnn.revenue;
-      DATA.currentMonth.therapistPay = _curAnn.therapistPay;
-      // Only update profit if no manual expense data (expenses===0 → sheet-derived only)
-      if (DATA.currentMonth.expenses === 0) {
-        DATA.currentMonth.netProfit = _curAnn.netProfit;
-        DATA.currentMonth.profitPct = _curAnn.profitPct;
-      }
+      DATA.currentMonth.revenue      = _curAnn.revenue;       // = Cash In (จากชีท D)
+      DATA.currentMonth.therapistPay = _curAnn.therapistPay;  // จากชีท F
+      DATA.currentMonth.netProfit    = _curAnn.netProfit;     // = P&L (Net Rev − รายจ่าย)
+      DATA.currentMonth.profitPct    = _curAnn.profitPct;     // จากชีท I
+      DATA.currentMonth.expenses     = _curAnn.expenses;      // จากชีท E
+      // 🆕 v2.8: 2 มุมมองแยกกัน
+      DATA.currentMonth.netProfitAccrual = _curAnn.netProfitAccrual || _curAnn.netProfit || 0;
+      DATA.currentMonth.cashFlowNet      = _curAnn.cashFlowNet || ((_curAnn.revenue || 0) - (_curAnn.expenses || 0));
     }
     if (live.mtd) {
-      DATA.currentMonth.cashReceived = live.mtd.netRevenue || 0;
+      // ⭐ "เงินสดรับจริง" = Cash In จากชีท สรุปประจำปี D column
+      DATA.currentMonth.cashReceived = live.mtd.cashIn || live.mtd.netRevenue || 0;
+      // 🆕 v2.8: override จาก mtd ถ้ามี
+      if (live.mtd.netProfitAccrual !== undefined) {
+        DATA.currentMonth.netProfitAccrual = live.mtd.netProfitAccrual;
+      }
+      if (live.mtd.cashFlowNet !== undefined) {
+        DATA.currentMonth.cashFlowNet = live.mtd.cashFlowNet;
+      }
     }
 
-    // ── LIVE EXPENSES: patch from ต้นทุน + รายจ่าย sheets ───────────
-    // live.expenses = { fixedTotal, variableTotal, total, breakdown:[{category,amount,type}] }
-    if (live.expenses && live.expenses.total > 0) {
-      const liveFixedAndVar = live.expenses.total; // fixed + variable (NOT therapistPay)
-      const liveTherapistPay = (live.mtd && live.mtd.therapistPay) || DATA.currentMonth.therapistPay || 0;
-      // Total cost = therapistPay + all other expenses
-      const totalExpenses = liveTherapistPay + liveFixedAndVar;
-
-      DATA.currentMonth.expenses = totalExpenses;
-      DATA.currentMonth.netProfit = DATA.currentMonth.revenue - totalExpenses;
-      DATA.currentMonth.profitPct = DATA.currentMonth.revenue > 0
-        ? Math.round(DATA.currentMonth.netProfit / DATA.currentMonth.revenue * 1000) / 10
-        : 0;
-
-      // Sync into annual current month so charts + annual grid update
-      const _curAnnExp = DATA.annual.findIndex(m => m.isCur);
-      if (_curAnnExp >= 0) {
-        DATA.annual[_curAnnExp].expenses  = totalExpenses;
-        DATA.annual[_curAnnExp].netProfit = DATA.currentMonth.netProfit;
-        DATA.annual[_curAnnExp].profitPct = DATA.currentMonth.profitPct;
-        DATA.annual[_curAnnExp].status    = DATA.currentMonth.netProfit >= 0 ? '✅' : '⚠️';
-      }
-
-      // Rebuild expenseBreakdown from live data
-      // Map category names to icons/colors
+    // ── 🆕 v2.7: LIVE EXPENSES — ใช้แค่ breakdown (ไม่ override ตัวเลข)
+    // ตัวเลข expenses/netProfit/profitPct มาจาก _curAnn (ชีท `สรุปประจำปี`) แล้ว
+    // ที่นี่แค่สร้าง breakdown สำหรับโชว์รายหมวด
+    if (live.expenses) {
+      // Rebuild expenseBreakdown from live (รายจ่าย ทุกหมวด)
       const ICON_MAP = {
+        'hr': { icon:'👐', color:'#5C3D3E' },
+        'payroll': { icon:'👐', color:'#5C3D3E' },
         'ค่ามือ': { icon:'👐', color:'#5C3D3E' },
-        'therapist': { icon:'👐', color:'#5C3D3E' },
+        'เงินเดือน': { icon:'💼', color:'#6B5B4A' },
         'ค่าเช่า': { icon:'🏠', color:'#6C7A4E' },
         'ค่าน้ำ': { icon:'💡', color:'#6C7A4E' },
         'ค่าไฟ': { icon:'💡', color:'#6C7A4E' },
-        'ค่าน้ำ+ค่าไฟ': { icon:'💡', color:'#6C7A4E' },
+        'ซักรีด': { icon:'🧺', color:'#8B9D6E' },
+        'วัสดุ': { icon:'🧴', color:'#4A6B6C' },
+        'สิ้นเปลือง': { icon:'🧴', color:'#4A6B6C' },
+        'การตลาด': { icon:'📣', color:'#8B6B4A' },
         'marketing': { icon:'📣', color:'#8B6B4A' },
         'โฆษณา': { icon:'📣', color:'#8B6B4A' },
-        'ค่าผลิตภัณฑ์': { icon:'🧴', color:'#4A6B6C' },
-        'สินค้า': { icon:'🧴', color:'#4A6B6C' },
-        'เงินเดือน': { icon:'💼', color:'#6B5B4A' },
+        'ชุด': { icon:'👕', color:'#7A5859' },
+        'อื่น': { icon:'📦', color:'#9C8E80' },
         'default': { icon:'📋', color:'#8B7B6B' }
       };
       function getIconColor(catName) {
-        const lower = catName.toLowerCase();
+        const lower = (catName || '').toLowerCase();
         for (const key in ICON_MAP) {
           if (key !== 'default' && lower.includes(key)) return ICON_MAP[key];
         }
         return ICON_MAP['default'];
       }
 
-      // Always keep therapistPay as first row
-      const newBreakdown = [
-        { cat:'ค่ามือหมอนวด', amount: liveTherapistPay, icon:'👐', color:'#5C3D3E' }
-      ];
-      (live.expenses.breakdown || []).forEach(item => {
+      DATA.expenseBreakdown = (live.expenses.breakdown || []).map(item => {
         const ic = getIconColor(item.category || '');
-        newBreakdown.push({ cat: item.category, amount: item.amount, icon: ic.icon, color: ic.color });
+        return { cat: item.category, amount: item.amount, icon: ic.icon, color: ic.color };
       });
-      DATA.expenseBreakdown = newBreakdown;
     }
 
     // ── 7-DAY ROLLING AVERAGE (avg7) ─────────────────────────────
@@ -1167,6 +1255,88 @@ async function loadLiveData() {
       if (ytdExpSum > 0) DATA.ytd.expenses = ytdExpSum;
     }
 
+    // ── 🆕 patch currentMonth.name + nameTh จาก thaiTime ────────
+    {
+      const thaiMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      const enMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const t = live.generatedAt ? new Date(live.generatedAt) : new Date();
+      const m = t.getMonth(), y = t.getFullYear();
+      DATA.currentMonth.name   = enMonths[m] + ' ' + y;
+      DATA.currentMonth.nameTh = thaiMonths[m] + ' ' + (y + 543);
+    }
+
+    // ── 🆕 patch prevWeek (7 วันก่อน) จาก live.prevWeek ──────────
+    if (live.prevWeek) {
+      DATA.today.prevWeek = {
+        date:         live.prevWeek.date || '–',
+        sessions:     live.prevWeek.sessions || 0,
+        cashReceived: live.prevWeek.bankFlow || live.prevWeek.netRevenue || 0,
+        grossProfit:  live.prevWeek.grossProfit || 0
+      };
+    } else {
+      DATA.today.prevWeek = { date: '–', sessions: 0, cashReceived: 0, grossProfit: 0 };
+    }
+
+    // ── 🆕 compute gowabi จาก analytics.discountROI ──────────────
+    if (live.analytics && live.analytics.discountROI) {
+      const g = live.analytics.discountROI.find(r => r.type === 'Gowabi');
+      if (g) {
+        DATA.gowabi = {
+          mayCount:         g.sessions || 0,
+          mayTherapistCost: g.therapistPay || 0,
+          gross:            g.gross || 0,
+          note: 'Gowabi จ่ายค่ามือหมอโดยตรง — ไม่มีรายรับเงินสดเข้าร้าน'
+        };
+      } else {
+        DATA.gowabi = { mayCount: 0, mayTherapistCost: 0, gross: 0, note: '' };
+      }
+    }
+
+    // ── 🆕 compute expenseAnalysis จาก live data ─────────────────
+    {
+      const mtdSess = (live.mtd && live.mtd.sessions) || 0;
+      const mtdRev  = (live.mtd && live.mtd.revenue)  || 0;
+      const mtdTP   = (live.mtd && live.mtd.therapistPay) || 0;
+      const fixedTotal = (live.expenses && live.expenses.fixedTotal) || 0;
+      const varTotal   = (live.expenses && live.expenses.variableTotal) || 0;
+      const variableBase = mtdTP + varTotal;  // ค่ามือ + ของสิ้นเปลือง
+      const avgRev  = mtdSess > 0 ? Math.round(mtdRev / mtdSess) : 0;
+      const varCps  = mtdSess > 0 ? Math.round(variableBase / mtdSess) : 0;
+      const contrib = avgRev - varCps;
+      const breakEven = contrib > 0 ? Math.ceil(fixedTotal / contrib) : 0;
+      const costPerSess = mtdSess > 0 ? Math.round((fixedTotal + variableBase) / mtdSess) : 0;
+
+      // Trend: 3 เดือนล่าสุดจาก annual
+      const trend3 = (DATA.annual || []).slice(0, 3).reverse().map(m => ({
+        mo: m.mo,
+        therapistPay: m.therapistPay || 0,
+        fixed: fixedTotal,
+        oneTime: Math.max(0, (m.expenses || 0) - (m.therapistPay || 0) - fixedTotal)
+      }));
+
+      // Items breakdown
+      const fixedItems = ((live.expenses && live.expenses.breakdown) || [])
+        .filter(b => b.type === 'fixed')
+        .map(b => ({ name: b.category, amount: b.amount, icon: '🏠' }));
+      const variableItems = [{ name: 'ค่ามือหมอนวด', amount: mtdTP, icon: '👐', note: 'ผันแปรตามจำนวน sessions' }]
+        .concat(((live.expenses && live.expenses.breakdown) || [])
+          .filter(b => b.type === 'variable')
+          .map(b => ({ name: b.category, amount: b.amount, icon: '🛒', note: '' })));
+
+      DATA.expenseAnalysis = {
+        fixedBase: fixedTotal,
+        variableBase: variableBase,
+        costPerSession: costPerSess,
+        varCostPerSession: varCps,
+        breakEvenSessions: breakEven,
+        avgRevenuePerSession: avgRev,
+        contributionMargin: contrib,
+        trend: trend3,
+        fixedItems: fixedItems,
+        variableItems: variableItems
+      };
+    }
+
     // ── update lastUpdated ───────────────────────────────────────
     if (live.generatedAt) {
       const d = new Date(live.generatedAt);
@@ -1177,13 +1347,7 @@ async function loadLiveData() {
       });
     }
 
-    console.info('✅ Live data loaded from Apps Script:', live.generatedAt);
-    return true;
-
-  } catch (err) {
-    console.warn('⚠️ ดึงข้อมูล live ไม่สำเร็จ — ใช้ข้อมูล fallback:', err.message);
-    return false;
-  }
+    console.info('✅ Live data patched:', live.generatedAt);
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────
@@ -1289,10 +1453,13 @@ function render(){
   set('h-target-need',`ต้องการ ${fmt(neededPerDay)}/วัน (${daysLeft} วัน)`);
   set('h-target-goal',fmt(tgt)+' เป้า');
 
+  // Cash In ใน Hero (cell ที่ 3 ข้างๆ กำไรสุทธิ + Margin)
+  set('h-cashin', fmt(cm.cashReceived));
+
   set('sc-exp',fmt(cm.expenses));
-  set('sc-exp-sub',`${cm.revenue>0?(cm.expenses/cm.revenue*100).toFixed(1):0}% ของรายรับ`);
+  set('sc-exp-sub',`${cm.revenue>0?(cm.expenses/cm.revenue*100).toFixed(1):0}% ของ Net Revenue`);
   set('sc-pay',fmt(cm.therapistPay));
-  set('sc-pay-sub',`HR ${cm.revenue>0?(cm.therapistPay/cm.revenue*100).toFixed(1):0}% · ${d.therapists.length} คน`);
+  set('sc-pay-sub',`HR ${cm.revenue>0?(cm.therapistPay/cm.revenue*100).toFixed(1):0}% ของ Net Revenue · ${d.therapists.length} คน`);
 
   set('sc-ytd-rev',fmt(d.ytd.revenue));
   const ytdPftEl=$('sc-ytd-pft');
@@ -1300,6 +1467,43 @@ function render(){
   ytdPftEl.className='sc-val '+(d.ytd.netProfit>=0?'pos':'neg');
   set('sc-cash',fmt(cm.cashReceived));
   set('sc-mem',d.members.total+' คน');
+
+  // 🆕 v2.9: Member Credit Alert
+  const mc = d.memberCredit;
+  if (mc && mc.summary) {
+    const s = mc.summary;
+    set('credit-alert-sub', `${s.totalMembers} Members · Liability รวม ${fmt(s.totalLiability)}`);
+    $('credit-alert-kpis').innerHTML = [
+      {l:'🔴 หมดแล้ว',  v:s.critical+' คน', c:s.critical>0?'neg':'', sub:'ต้อง Topup ใหม่'},
+      {l:'🟠 ใกล้หมด',  v:s.low+' คน',      c:s.low>0?'warn':'',     sub:'ควรเชียร์ขาย ≤ ฿1,500'},
+      {l:'🟡 ต่ำ',       v:s.warning+' คน',  c:s.warning>0?'gold':'', sub:'เริ่มน้อย ≤ ฿3,000'},
+      {l:'🟢 ปกติ',      v:s.ok+' คน',       c:'pos',                 sub:'> ฿3,000'}
+    ].map(k=>`<div class="card sc"><div class="sc-lbl">${k.l}</div><div class="sc-val ${k.c||''}">${k.v}</div><div class="sc-tag">${k.sub}</div></div>`).join('');
+
+    const alertList = mc.alertList || [];
+    if (alertList.length > 0) {
+      const STATUS_COLOR = {critical:'var(--negative)', low:'var(--warning)', warning:'var(--gold)'};
+      const STATUS_EMOJI = {critical:'🔴', low:'🟠', warning:'🟡'};
+      const STATUS_LABEL = {critical:'หมดแล้ว', low:'ใกล้หมด', warning:'ต่ำ'};
+      $('credit-alert-list').innerHTML = `
+        <div style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">⚠️ ${alertList.length} คนต้องเชียร์ขายต่อ (เรียงจาก balance น้อยสุด)</div>
+        ${alertList.map(m=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
+            <div style="font-size:14px">${STATUS_EMOJI[m.status]||'⚪'}</div>
+            <div style="flex:1">
+              <div style="font-weight:600">${m.name} <span style="font-size:10.5px;color:var(--text-soft);font-weight:400">· ${m.tier}</span></div>
+              <div style="font-size:10.5px;color:var(--text-soft)">${m.lastVisit?'เข้าล่าสุด '+m.lastVisit+' ('+m.daysAgo+' วันที่แล้ว)':'ยังไม่เคยมาใช้'}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:700;color:${STATUS_COLOR[m.status]}">${fmt(m.balance)}</div>
+              <div style="font-size:10px;color:var(--text-soft)">${STATUS_LABEL[m.status]||''}</div>
+            </div>
+          </div>`).join('')}
+      `;
+    } else {
+      $('credit-alert-list').innerHTML = '<div style="padding:14px;text-align:center;color:var(--text-soft);font-size:12px">✅ ไม่มี Member ที่ Credit ใกล้หมด</div>';
+    }
+  }
 
   // Annual grid (newest first)
   const active=d.annual.filter(m=>m.revenue>0||m.isCur);
@@ -1314,13 +1518,14 @@ function render(){
       </div>
     </div>`).join('');
 
-  // ── FINANCE ──
+  // ── FINANCE ── 🆕 v2.8: เพิ่ม "กระแสเงินสดสุทธิ" KPI
+  const cashFlowNet = cm.cashFlowNet || 0;
   $('fin-kpis').innerHTML=[
-    {l:'รายรับ YTD',v:fmt(d.ytd.revenue),c:''},
-    {l:'กำไร YTD',v:fmt(d.ytd.netProfit),c:d.ytd.netProfit>=0?'pos':'neg'},
+    {l:'กำไรสุทธิ (P&L)',v:fmt(cm.netProfit||cm.netProfitAccrual||0),c:(cm.netProfit||cm.netProfitAccrual||0)>=0?'pos':'neg'},
+    {l:'กระแสเงินสด',v:fmt(cashFlowNet),c:cashFlowNet>=0?'pos':'neg'},
     {l:'HR Cost เดือนนี้',v:(cm.revenue>0?(cm.therapistPay/cm.revenue*100).toFixed(1):'–')+'%',
      c:cm.revenue>0&&cm.therapistPay/cm.revenue>0.45?'warn':''},
-    {l:'เดือนที่รายรับสูงสุด',v:d.annual.reduce((mx,m)=>m.revenue>mx.revenue?m:mx,d.annual[0]).mo,c:'pos'}
+    {l:'เดือนรายรับสูงสุด',v:(d.annual.length>0?d.annual.reduce((mx,m)=>m.revenue>(mx&&mx.revenue||0)?m:mx,d.annual[0]).mo:'–'),c:'pos'}
   ].map(k=>`<div class="card sc"><div class="sc-lbl">${k.l}</div><div class="sc-val ${k.c}">${k.v}</div></div>`).join('');
 
   $('fin-tbody').innerHTML=d.annual.map(m=>`
@@ -1353,41 +1558,135 @@ function render(){
       <div style="text-align:right"><div class="t-val">${perP>0?fmt(perP):'–'}</div><div class="t-note">ค่ามือ (ประมาณ)</div></div>
     </div>`).join('');
 
-  // ── MEMBERS ──
-  const mh=d.memberHealth||[];
-  const atRiskCount=mh.filter(m=>m.atRisk).length;
-  const activeCount=mh.filter(m=>!m.atRisk&&m.daysAgo<=30).length;
-  const totalCredit=mh.reduce((s,m)=>s+(m.credit||0),0);
-  $('mem-kpis').innerHTML=[
-    {l:'สมาชิกทั้งหมด',  v:d.members.total+' คน', c:''},
-    {l:'Active (30d)',    v:activeCount+' คน',      c:'pos'},
-    {l:'⚠️ At-Risk (30d+)',v:atRiskCount+' คน',     c:atRiskCount>0?'warn':''},
-    {l:'เครดิตรวม',       v:fmt(totalCredit),       c:'gold'}
-  ].map(k=>`<div class="card sc"><div class="sc-lbl">${k.l}</div><div class="sc-val ${k.c}">${k.v}</div></div>`).join('');
+  // ── 🆕 v3.0: MEMBERS (refactored — Master Table + 3 Insight Cards) ──
+  const mc2 = d.memberCredit || {};
+  const allMembers = mc2.members || [];
+  const mcSum = mc2.summary || {};
+  const vipList = mc2.vipList || [];
 
-  $('mem-health-list').innerHTML=mh.map(m=>`
-    <div class="mem-row">
-      <div class="mem-av${m.atRisk?' risk':''}">${m.name.slice(-1)}</div>
-      <div class="mem-body">
-        <div class="mem-name">${m.name}</div>
-        <div class="mem-last${m.atRisk?' at-risk':''}">เข้าล่าสุด ${m.lastVisit} · ${m.daysAgo} วันที่แล้ว</div>
+  // KPI Cards
+  $('mem-kpis').innerHTML=[
+    {l:'สมาชิกทั้งหมด',   v:(mcSum.totalMembers||0)+' คน', c:''},
+    {l:'🏦 Liability',     v:fmt(mcSum.totalLiability||0),  c:'gold', sub:'Credit ค้างจ่าย'},
+    {l:'⚠️ ต้องเชียร์',    v:((mcSum.critical||0)+(mcSum.low||0))+' คน', c:((mcSum.critical||0)+(mcSum.low||0))>0?'warn':'', sub:'Balance ≤ ฿1,500'},
+    {l:'🏆 Lifetime Value', v:fmt(mcSum.totalSpentLifetime||0), c:'pos', sub:'รวมที่ใช้จ่ายทั้งหมด'}
+  ].map(k=>`<div class="card sc"><div class="sc-lbl">${k.l}</div><div class="sc-val ${k.c}">${k.v}</div>${k.sub?`<div class="sc-tag">${k.sub}</div>`:''}</div>`).join('');
+
+  // ── Card A: Top 10 VIP ──
+  if (vipList.length > 0) {
+    $('mem-vip-list').innerHTML = vipList.map((m, i) => {
+      const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+      const tierEm = m.tier==='Gold'?'🥇':m.tier==='Silver'?'🥈':'🏷️';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--border);font-size:11.5px">
+        <div style="width:22px;text-align:center;font-size:13px">${medal}</div>
+        <div style="flex:1">
+          <div style="font-weight:600">${m.name} <span style="font-size:10px;color:var(--text-soft);font-weight:400">${tierEm}</span></div>
+          <div style="font-size:10px;color:var(--text-soft)">${m.visits} visits · เฉลี่ย ${fmt(m.avgPerVisit)}/ครั้ง</div>
+        </div>
+        <div style="text-align:right;font-weight:700;color:var(--accent)">${fmt(m.totalSpent)}</div>
+      </div>`;
+    }).join('');
+  } else {
+    $('mem-vip-list').innerHTML = '<div style="padding:14px;text-align:center;color:var(--text-soft);font-size:12px">ยังไม่มีข้อมูล</div>';
+  }
+
+  // ── Card D: Total Liability (Cash vs Bonus) ──
+  const liabTotal = mcSum.totalLiability || 0;
+  const liabCash  = mcSum.cashLiability  || 0;
+  const liabBonus = mcSum.bonusLiability || 0;
+  const cashPct  = liabTotal>0 ? Math.round(liabCash/liabTotal*100) : 0;
+  const bonusPct = liabTotal>0 ? Math.round(liabBonus/liabTotal*100) : 0;
+  $('mem-liability').innerHTML = `
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:24px;font-weight:700;color:var(--gold)">${fmt(liabTotal)}</div>
+      <div style="font-size:11px;color:var(--text-soft)">Credit ที่ Member ใช้ได้ทั้งหมด</div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:6px">
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px">
+        <span>💰 Cash Credit</span>
+        <b style="color:var(--text)">${fmt(liabCash)} <span style="font-size:10px;color:var(--text-soft);font-weight:400">(${cashPct}%)</span></b>
       </div>
-      <span class="mem-tier-badge ${m.tier==='Gold'?'gold':'silver'}">${m.tier}</span>
-      <div style="text-align:right">
-        <div class="mem-credit" style="color:${m.credit>0?'var(--accent)':'var(--text-soft)'}">${m.credit>0?fmt(m.credit):'–'}</div>
-        <div class="mem-days" style="font-size:10px;color:var(--text-soft)">เครดิต</div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px">
+        <span>🎁 Bonus Credit</span>
+        <b style="color:var(--text)">${fmt(liabBonus)} <span style="font-size:10px;color:var(--text-soft);font-weight:400">(${bonusPct}%)</span></b>
       </div>
-    </div>`).join('')+`
-    <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-sm);font-size:11px;color:var(--text-soft)">
-      ℹ️ แสดง ${mh.length} คน จากทั้งหมด ${d.members.total} คน · อัปเดตจากชีต Member Credits
+    </div>
+    <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);line-height:1.5">
+      💡 เงินที่ Member จ่ายมาแล้ว ${fmt(liabCash)} ต้องบริการให้<br>
+      ของแถม ${fmt(liabBonus)} เป็นต้นทุนการตลาด
     </div>`;
 
-  // Member credit doughnut
+  // ── Card E: Member Revenue Contribution (6 months) ──
+  const revContrib = d.memberRevContrib || [];
+  if (revContrib.length > 0) {
+    const latestPct = revContrib[revContrib.length-1].pctRev || 0;
+    set('mem-rev-contrib-sub',
+      `เดือนล่าสุด: ${latestPct.toFixed(1)}% · ${revContrib[revContrib.length-1].mo} '${revContrib[revContrib.length-1].yr}`);
+    dc('ch-mem-rev-contrib');
+    charts['ch-mem-rev-contrib'] = new Chart($('ch-mem-rev-contrib'), {
+      type: 'bar',
+      data: {
+        labels: revContrib.map(m=>m.mo+' \''+m.yr),
+        datasets: [
+          {label:'Non-Member', data:revContrib.map(m=>m.totalRev-m.memberRev), backgroundColor:'rgba(108,122,78,.55)', stack:'s', borderRadius:3},
+          {label:'Member',     data:revContrib.map(m=>m.memberRev), backgroundColor:'rgba(201,169,110,.7)', stack:'s', borderRadius:3}
+        ]
+      },
+      options: {...CO, scales:{
+        x:{ticks:{color:'rgba(120,106,94,.65)',font:{size:9}},grid:{display:false},stacked:true,border:{display:false}},
+        y:{ticks:{color:'rgba(120,106,94,.65)',font:{size:9},callback:v=>'฿'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(92,61,62,.06)'},stacked:true,border:{display:false}}
+      }, interaction:{mode:'index',intersect:false}}
+    });
+  }
+
+  // ── Master Member Table ──
+  window.__MEM_DATA__ = allMembers;
+  set('mem-master-sub', allMembers.length + ' Members ทั้งหมด · ' + (mcSum.critical+mcSum.low) + ' ต้องเชียร์ขาย · ' + (mcSum.warning) + ' ต่ำ · ' + (mcSum.ok) + ' ปกติ');
+  function renderMemberTable() {
+    const q = ($('mem-search').value||'').toLowerCase().trim();
+    const tier = $('mem-filter-tier').value;
+    const status = $('mem-filter-status').value;
+    const sortBy = $('mem-sort').value;
+    const STATUS_COLOR = {critical:'var(--negative)', low:'var(--warning)', warning:'var(--gold)', ok:'var(--positive)'};
+    const STATUS_EMOJI = {critical:'🔴', low:'🟠', warning:'🟡', ok:'🟢'};
+    const STATUS_LABEL = {critical:'หมดแล้ว', low:'ใกล้หมด', warning:'ต่ำ', ok:'ปกติ'};
+    let arr = (window.__MEM_DATA__||[]).slice();
+    if (q)      arr = arr.filter(m => m.name.toLowerCase().includes(q));
+    if (tier)   arr = arr.filter(m => m.tier === tier);
+    if (status) arr = arr.filter(m => m.status === status);
+    if      (sortBy === 'totalSpent') arr.sort((a,b)=>b.totalSpent-a.totalSpent);
+    else if (sortBy === 'lastVisit')  arr.sort((a,b)=>a.daysAgo-b.daysAgo);
+    else if (sortBy === 'pctUsed')    arr.sort((a,b)=>b.pctUsed-a.pctUsed);
+    else                              arr.sort((a,b)=>a.balance-b.balance);
+
+    $('mem-master-tbody').innerHTML = arr.map(m=>`
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 6px">
+          <div style="font-weight:600">${m.name}</div>
+          <div style="font-size:10px;color:var(--text-soft)">${m.tier==='Gold'?'🥇':'🥈'} ${m.tier}</div>
+        </td>
+        <td style="padding:8px 6px;text-align:right">${fmt(m.totalGot)}</td>
+        <td style="padding:8px 6px;text-align:right;color:var(--text-soft)">${fmt(m.totalUsed)}</td>
+        <td style="padding:8px 6px;text-align:right;font-weight:700;color:${STATUS_COLOR[m.status]}">${fmt(m.balance)}</td>
+        <td style="padding:8px 6px;text-align:right">${m.pctUsed}%</td>
+        <td style="padding:8px 6px;text-align:right">${m.visits}</td>
+        <td style="padding:8px 6px;text-align:right">${fmt(m.totalSpent)}</td>
+        <td style="padding:8px 6px;font-size:10.5px">${m.lastVisit||'–'}${m.daysAgo>=0?'<div style="font-size:9px;color:var(--text-soft)">'+m.daysAgo+' วันก่อน</div>':''}</td>
+        <td style="padding:8px 6px;text-align:center"><span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:3px 7px;border-radius:10px;background:var(--surface-2);color:${STATUS_COLOR[m.status]}">${STATUS_EMOJI[m.status]} ${STATUS_LABEL[m.status]}</span></td>
+      </tr>`).join('') || '<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--text-soft);font-size:11px">ไม่พบ Member ตามเงื่อนไข</td></tr>';
+  }
+  ['mem-search','mem-filter-tier','mem-filter-status','mem-sort'].forEach(id=>{
+    const el = $(id);
+    if (el && !el._bound) { el.addEventListener('input', renderMemberTable); el.addEventListener('change', renderMemberTable); el._bound = true; }
+  });
+  renderMemberTable();
+
+  // Credit Summary by Tier (เดิม)
   dc('ch-mem-credit');
-  const goldMembers=mh.filter(m=>m.tier==='Gold');
-  const silverMembers=mh.filter(m=>m.tier==='Silver');
-  const goldCredit=goldMembers.reduce((s,m)=>s+m.credit,0);
-  const silverCredit=silverMembers.reduce((s,m)=>s+m.credit,0);
+  const goldMembers=allMembers.filter(m=>m.tier==='Gold');
+  const silverMembers=allMembers.filter(m=>m.tier==='Silver');
+  const goldCredit=goldMembers.reduce((s,m)=>s+(m.balance||0),0);
+  const silverCredit=silverMembers.reduce((s,m)=>s+(m.balance||0),0);
   charts['ch-mem-credit']=new Chart($('ch-mem-credit'),{
     type:'doughnut',
     data:{
@@ -1410,28 +1709,38 @@ function render(){
   });
 
   // ── EXPENSE BREAKDOWN ──
-  const expTotal=d.expenseBreakdown.reduce((s,e)=>s+e.amount,0);
-  set('exp-sub',`พ.ค. 2026 · รวม ${fmt(expTotal)}`);
-  $('exp-breakdown').innerHTML=d.expenseBreakdown.map(e=>{
-    const pct=(e.amount/expTotal*100).toFixed(1);
-    return `<div class="exp-row">
-      <div class="exp-icon">${e.icon}</div>
-      <div class="exp-meta">
-        <div class="exp-cat">${e.cat}</div>
-        <div class="exp-bar-wrap"><div class="exp-bar-fill" style="width:${pct}%;background:${e.color}"></div></div>
-      </div>
-      <div class="exp-pct">${pct}%</div>
-      <div class="exp-amt">${fmt(e.amount)}</div>
-    </div>`;
-  }).join('')+`
-    <div class="exp-row" style="padding-top:10px;margin-top:4px;border-top:2px solid var(--border-2);border-bottom:0">
-      <div class="exp-icon">📊</div>
-      <div class="exp-meta"><div class="exp-cat" style="font-weight:700">รวมค่าใช้จ่ายทั้งหมด</div></div>
-      <div class="exp-amt" style="color:var(--primary)">${fmt(expTotal)}</div>
-    </div>`;
+  const expBreakdown = d.expenseBreakdown || [];
+  const expTotal = expBreakdown.reduce((s,e)=>s+e.amount,0);
+  if (expBreakdown.length === 0) {
+    set('exp-sub', (cm.nameTh || 'เดือนนี้') + ' · ยังไม่มีข้อมูลค่าใช้จ่าย');
+    $('exp-breakdown').innerHTML = '<div style="padding:18px;text-align:center;color:var(--text-soft);font-size:12px">ยังไม่มีข้อมูลค่าใช้จ่ายในชีท รายจ่าย เดือนนี้</div>';
+  } else {
+    set('exp-sub', (cm.nameTh || 'เดือนนี้') + ' · รวม ' + fmt(expTotal));
+    $('exp-breakdown').innerHTML=expBreakdown.map(e=>{
+      const pct=(e.amount/expTotal*100).toFixed(1);
+      return `<div class="exp-row">
+        <div class="exp-icon">${e.icon}</div>
+        <div class="exp-meta">
+          <div class="exp-cat">${e.cat}</div>
+          <div class="exp-bar-wrap"><div class="exp-bar-fill" style="width:${pct}%;background:${e.color}"></div></div>
+        </div>
+        <div class="exp-pct">${pct}%</div>
+        <div class="exp-amt">${fmt(e.amount)}</div>
+      </div>`;
+    }).join('')+`
+      <div class="exp-row" style="padding-top:10px;margin-top:4px;border-top:2px solid var(--border-2);border-bottom:0">
+        <div class="exp-icon">📊</div>
+        <div class="exp-meta"><div class="exp-cat" style="font-weight:700">รวมค่าใช้จ่ายทั้งหมด</div></div>
+        <div class="exp-amt" style="color:var(--primary)">${fmt(expTotal)}</div>
+      </div>`;
+  }
+  // labels ที่ต้องอัพเดททุกครั้ง (ไม่ขึ้นกับ breakdown)
+  set('fv-sub', cm.nameTh || 'เดือนนี้');
+  set('eff-sub', 'รายได้ต่อ session (' + (cm.nameTh || 'เดือนนี้') + ')');
+  set('today-mtd-title', 'สะสม ' + (cm.nameTh || 'เดือนนี้'));
 
   // ── GOWABI ──
-  const gb=d.gowabi;
+  const gb=d.gowabi || { mayCount:0, mayTherapistCost:0, note:'ยังไม่มีข้อมูล Gowabi เดือนนี้' };
   const gbAvgVal=790;
   const gbGrossEstimate=gb.mayCount*gbAvgVal;
   $('gowabi-section').innerHTML=`
@@ -1503,7 +1812,7 @@ function render(){
         <div class="be-box">
           <div class="be-val" style="color:var(--accent)">${fmt(ea.avgRevenuePerSession)}</div>
           <div class="be-lbl">Rev / session</div>
-          <div class="be-sub">เฉลี่ย พ.ค.</div>
+          <div class="be-sub">เฉลี่ย ${cm.mo || 'เดือนนี้'}</div>
         </div>
         <div class="be-box">
           <div class="be-val" style="color:var(--gold)">${fmt(ea.contributionMargin)}</div>
@@ -1687,13 +1996,16 @@ function renderToday(){
   const t=DATA.today;
   if(!t) return;
 
-  // KPIs
-  const profitPct=t.cashReceived>0?(t.grossProfit/t.cashReceived*100).toFixed(1):0;
+  // KPIs — แยก Cash In (เงินเข้าจริง) กับ Net Revenue (รับรู้รายได้) ให้ชัดเจน
+  const baseForMargin = t.netRevenue || t.cashReceived || 0;
+  const profitPct = baseForMargin>0 ? (t.grossProfit/baseForMargin*100).toFixed(1) : 0;
+  const payPct    = baseForMargin>0 ? (t.therapistPay/baseForMargin*100).toFixed(1) : 0;
   $('today-kpis').innerHTML=[
-    {l:'ยอดรับจริงวันนี้', v:fmt(t.cashReceived), c:''},
-    {l:'Sessions', v:t.sessions+' sessions', c:'', sub:t.customers+' ลูกค้า'},
-    {l:'กำไรขั้นต้น', v:fmt(t.grossProfit), c:t.grossProfit>=0?'pos':'neg', sub:'Margin '+profitPct+'%'},
-    {l:'ค่ามือรวม', v:fmt(t.therapistPay), c:'gold', sub:(t.cashReceived>0?(t.therapistPay/t.cashReceived*100).toFixed(1):0)+'% ของรายรับ'}
+    {l:'Cash In วันนี้',     v:fmt(t.cashReceived), c:'',    sub:'เงินสด+QR+บัตร+Top-up'},
+    {l:'Net Revenue วันนี้', v:fmt(t.netRevenue),   c:'pos', sub:'รับรู้รายได้ (P&L)'},
+    {l:'Sessions',           v:t.sessions+' sessions', c:'', sub:(t.customers||0)+' ลูกค้า'},
+    {l:'กำไรขั้นต้น',         v:fmt(t.grossProfit),  c:t.grossProfit>=0?'pos':'neg', sub:'Margin '+profitPct+'% ของ Net Rev'},
+    {l:'ค่ามือรวม',           v:fmt(t.therapistPay), c:'gold', sub:payPct+'% ของ Net Rev'}
   ].map(k=>`<div class="card sc"><div class="sc-lbl">${k.l}</div><div class="sc-val ${k.c}">${k.v}</div>${k.sub?`<div class="sc-tag">${k.sub}</div>`:''}</div>`).join('');
 
   // Session list
@@ -1758,7 +2070,7 @@ function renderToday(){
     </div>`).join('');
 
   // Compare
-  const pw=t.prevWeek;
+  const pw=t.prevWeek || { date:'–', sessions:0, cashReceived:0, grossProfit:0 };
   function deltaHtml(cur, prev){
     if(!prev||prev===0) return '';
     const pct=((cur-prev)/prev*100).toFixed(1);
@@ -1813,15 +2125,17 @@ function renderToday(){
   const hrPct=(t.cashReceived>0?(t.therapistPay/t.cashReceived*100).toFixed(1):0);
   const belowAvg=t.avgPerSession < t.avg7RevPerSession;
   const insuredCount=t.therapistPerf.filter(x=>x.insured).length;
+  // 🆕 คำนวณหมอรายได้สูงสุดวันนี้จาก live data
+  const topTher = (t.therapistPerf || []).slice().sort((a,b)=>(b.revenue||0)-(a.revenue||0))[0];
+  const topTherTxt = topTher ? `<b>${topTher.name} ${fmt(topTher.revenue)}</b>` : '<span style="color:var(--text-soft)">ยังไม่มีข้อมูล</span>';
+  const memCredAmount = (t.payments.find(p=>(p.label||'').toLowerCase().includes('member')) || {}).amount || 0;
+  const memCredPct = t.cashReceived>0 ? (memCredAmount/t.cashReceived*100).toFixed(0) : 0;
   $('today-insight').innerHTML=`<ul>
     <li>💡 รายได้เฉลี่ย/session <b>${fmt(t.avgPerSession)}</b> ${belowAvg?`<span class="warn-item">(ต่ำกว่าเฉลี่ย 7 วัน ${fmt(t.avg7RevPerSession)})</span>`:'<span class="ok-item">✅</span>'}</li>
-    <li>🏆 หมอรายได้สูงสุดวันนี้: <b>เกด ฿1,840</b></li>
+    <li>🏆 หมอรายได้สูงสุดวันนี้: ${topTherTxt}</li>
     <li>🛡 หมอ ${insuredCount} คน ได้รับประกันค่ามือ ฿500</li>
-    <li class="warn-item">⚠️ Sessions (${t.sessions}) ต่ำกว่าเฉลี่ย 7 วัน (${t.avg7.sessionsPerDay})</li>
-    <li class="warn-item">⚠️ รายได้ลดลง &gt;30% จากสัปดาห์ก่อน</li>
-    <li>👥 Member 1 / ${t.sessions} sessions · Member Credit ${t.cashReceived>0?(t.payments.find(p=>p.label==='Member Credit')?.amount/t.cashReceived*100).toFixed(0):0}% ของรายรับ</li>
-    <li>📌 บริการ 120 นาที = 40% — ลูกค้าชอบ session ยาว</li>
-    <li>💡 แนะนำ: Flash Sale ช่วง 15:00–18:00 วันพรุ่งนี้ดึงลูกค้าช่วงเย็น</li>
+    ${t.sessions < t.avg7.sessionsPerDay ? `<li class="warn-item">⚠️ Sessions (${t.sessions}) ต่ำกว่าเฉลี่ย 7 วัน (${t.avg7.sessionsPerDay})</li>` : ''}
+    <li>👥 Member Credit ${memCredPct}% ของ Net Revenue (${fmt(memCredAmount)})</li>
   </ul>`;
 }
 
@@ -1993,31 +2307,78 @@ function _posHmTip(e){
 }
 function hideHmTip(){ _hmTip.classList.remove('show'); }
 
+// ── CACHE HELPERS (localStorage stale-while-revalidate) ──────────────────
+const LS_KEY  = 'sookkaya_dash_cache';
+const LS_TTL  = 10 * 60 * 1000;   // 10 นาที (ต้องสอดคล้องกับ server-side 5 min TTL)
+
+function _saveCache(liveObj) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ ts: Date.now(), data: liveObj }));
+  } catch(e) { /* quota เต็ม — ข้ามได้ */ }
+}
+
+function _loadCache() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.ts || !parsed.data) return null;
+    if (Date.now() - parsed.ts > LS_TTL) return null;   // หมดอายุ
+    return parsed.data;
+  } catch(e) { return null; }
+}
+
+function _showLiveBadge(stale) {
+  const titleEl = document.getElementById('pg-title');
+  if (!titleEl) return;
+  let badge = document.getElementById('live-badge');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.id = 'live-badge';
+    badge.style.cssText = 'font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;' +
+      'border:1px solid;margin-left:8px;vertical-align:middle;letter-spacing:.5px;transition:all .4s;';
+    titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
+  }
+  if (stale) {
+    badge.textContent = '◌ CACHED';
+    badge.style.color = '#C9A96E';
+    badge.style.background = 'rgba(201,169,110,.12)';
+    badge.style.borderColor = 'rgba(201,169,110,.3)';
+  } else {
+    badge.textContent = '● LIVE';
+    badge.style.color = '#4caf50';
+    badge.style.background = 'rgba(76,175,80,.12)';
+    badge.style.borderColor = 'rgba(76,175,80,.3)';
+  }
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────
 buildNav();
 buildMobNav();
-render();          // render ด้วย hardcoded data ก่อนเพื่อให้โหลดเร็ว
-renderToday();
-renderAnalytics();
 
-// ดึง live data แล้ว re-render (ถ้า URL ตั้งค่าแล้ว)
+// ── STEP 1: แสดง cache ทันที (ถ้ามี) — 0ms perceived wait ──────────────
+const _cached = _loadCache();
+if (_cached) {
+  // patch DATA ด้วย cache แล้ว render ทันที → ผู้ใช้เห็น data ใน ~50ms
+  _applyLiveData(_cached);
+  render();
+  renderToday();
+  renderAnalytics();
+  _showLiveBadge(true);   // แสดง "CACHED" badge ระหว่างรอ fetch ใหม่
+} else {
+  // ไม่มี cache → render hardcoded data ก่อน (เดิม)
+  render();
+  renderToday();
+  renderAnalytics();
+}
+
+// ── STEP 2: fetch fresh data ใน background เสมอ ─────────────────────────
 loadLiveData().then(ok => {
   if (ok) {
     render();
     renderToday();
     renderAnalytics();
-    // แสดง badge "LIVE" ใน header
-    const badge = document.createElement('span');
-    badge.textContent = '● LIVE';
-    badge.style.cssText = 'font-size:10px;font-weight:700;color:#4caf50;' +
-      'background:rgba(76,175,80,.12);padding:2px 7px;border-radius:20px;' +
-      'border:1px solid rgba(76,175,80,.3);margin-left:8px;vertical-align:middle;' +
-      'letter-spacing:.5px;';
-    const titleEl = document.getElementById('pg-title');
-    if (titleEl && !document.getElementById('live-badge')) {
-      badge.id = 'live-badge';
-      titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
-    }
+    _showLiveBadge(false);   // อัพเดท badge → "LIVE"
   }
 });
 </script>
