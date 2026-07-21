@@ -1290,7 +1290,10 @@ function _applyLiveData(live) {
           mayCount:         g.sessions || 0,
           mayTherapistCost: g.therapistPay || 0,
           gross:            g.gross || 0,
-          note: 'Gowabi จ่ายค่ามือหมอโดยตรง — ไม่มีรายรับเงินสดเข้าร้าน'
+          // ข้อความเดิมเขียนว่า "ไม่มีรายรับเงินสดเข้าร้าน" ซึ่งไม่จริง
+          // Gowabi เก็บเงินไว้ในระบบเขาแล้วโอนให้ร้านเดือนละครั้ง
+          // แต่ยอดที่โอนมายังไม่เคยถูกบันทึกทั้งในชีทและในระบบ POS
+          note: 'Gowabi เก็บเงินไว้แล้วโอนให้ร้านเดือนละครั้ง — ยอดที่โอนยังไม่ได้บันทึกในระบบ'
         };
       } else {
         DATA.gowabi = { mayCount: 0, mayTherapistCost: 0, gross: 0, note: '' };
@@ -1763,16 +1766,18 @@ function render(){
         <div class="gowabi-lbl">ค่ามือที่จ่าย</div>
       </div>
       <div class="gowabi-stat">
-        <div class="gowabi-val" style="color:var(--negative)">฿0</div>
-        <div class="gowabi-lbl">รายรับเข้าร้าน</div>
+        <div class="gowabi-val" style="color:var(--text-muted)">ยังไม่บันทึก</div>
+        <div class="gowabi-lbl">ยอดที่ Gowabi โอนมา</div>
       </div>
     </div>
     <div style="font-size:12px;line-height:1.7;color:var(--text-muted)">
-      <div style="margin-bottom:6px">📌 <b>ผลกระทบสุทธิต่อร้าน:</b></div>
+      <div style="margin-bottom:6px">📌 <b>ยังสรุปผลกระทบไม่ได้:</b></div>
       <div style="padding-left:12px">
         • มูลค่า Gowabi ประมาณ <b>${fmt(gbGrossEstimate)}</b> (${gb.mayCount} session × ฿${gbAvgVal})<br>
-        • ร้านจ่ายค่ามือ <b style="color:var(--negative)">${fmt(gb.mayTherapistCost)}</b> โดยไม่ได้รายรับ<br>
-        • ขาดทุนสุทธิจาก Gowabi ≈ <b style="color:var(--negative)">${fmt(gb.mayTherapistCost)}</b>/เดือน
+        • ร้านจ่ายค่ามือไปแล้ว <b>${fmt(gb.mayTherapistCost)}</b><br>
+        • Gowabi เก็บเงินไว้แล้วโอนให้ร้านเดือนละครั้ง แต่<b>ยอดที่โอนยังไม่ได้บันทึกในระบบ</b>
+          จึงยังบอกไม่ได้ว่าช่องทางนี้กำไรหรือขาดทุน<br>
+        • ต้องรู้ก่อนว่า Gowabi หักค่าธรรมเนียมกี่ % และแต่ละเดือนโอนมาเท่าไหร่
       </div>
       <div style="margin-top:10px;padding:8px 10px;background:rgba(184,89,62,.06);border:1px solid rgba(184,89,62,.15);border-radius:8px;font-size:11px">
         ⚠️ ${gb.note}
