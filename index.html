@@ -525,7 +525,10 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
         <!-- Hero + 2 SCs -->
         <div class="g4">
           <div class="card hero span2" id="hero-card">
-            <div class="hero-eye">Net Revenue เดือนนี้ · MTD</div>
+            <!-- ป้ายนี้เคยเขียนว่า "Net Revenue" แต่ค่าที่แสดง (cm.revenue) คือ Cash In จากชีทคอลัมน์ D
+                 ดู DATA.currentMonth.revenue ตอน sync — คอมเมนต์ในโค้ดเองก็บอกว่า "= Cash In"
+                 แก้ป้ายให้ตรงกับตัวเลข แล้วย้าย Net Revenue จริงไปอยู่ช่องที่ 3 ข้างล่าง -->
+            <div class="hero-eye">Cash In เดือนนี้ · MTD</div>
             <div class="hero-val" id="h-rev">–</div>
             <div class="hero-row">
               <span class="delta" id="h-delta"></span>
@@ -541,7 +544,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
                 <div class="hero-v" id="h-margin">–</div>
               </div>
               <div class="hero-kv">
-                <div class="hero-k">Cash In</div>
+                <div class="hero-k">Net Revenue</div>
                 <div class="hero-v" id="h-cashin" style="color:var(--gold)">–</div>
               </div>
             </div>
@@ -576,9 +579,11 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
         <!-- YTD scorecards -->
         <div class="g4">
           <div class="card sc">
-            <div class="sc-lbl">Net Revenue YTD</div>
+            <!-- ค่านี้คือผลรวมของ annual[].revenue ซึ่งเป็น Cash In รายเดือน ไม่ใช่ Net Revenue
+                 ชีทมี Net Revenue รวม YTD อยู่ แต่ Apps Script ยังไม่ส่งมาให้ จึงติดป้ายตามค่าที่มีจริง -->
+            <div class="sc-lbl">Cash In YTD</div>
             <div class="sc-val" id="sc-ytd-rev">–</div>
-            <div class="sc-tag">รับรู้รายได้สะสมปีนี้</div>
+            <div class="sc-tag">เงินเข้าจริงสะสมปีนี้</div>
           </div>
           <div class="card sc">
             <div class="sc-lbl">กำไรสุทธิ YTD</div>
@@ -1426,6 +1431,9 @@ function render(){
   set('upd-lbl','Updated '+d.lastUpdated);
 
   // ── COCKPIT ──
+  // Net Revenue จริงมาจาก live.mtd.netRevenue (ชีทคำนวณส่วน cash portion ของ Member Credit ให้แล้ว)
+  // ห้ามใช้ cm.revenue แทน เพราะตัวนั้นคือ Cash In — คนละตัวเลขและต่างกันหลักหมื่นทุกเดือนที่มีสมาชิกใช้เครดิต
+  const mtdNet = (d.today && d.today.mtd && d.today.mtd.netRevenue) || cm.revenue;
   set('h-rev',fmt(cm.revenue));
   const prevM=d.annual[1];
   if(prevM&&prevM.revenue>0){
@@ -1453,13 +1461,14 @@ function render(){
   set('h-target-need',`ต้องการ ${fmt(neededPerDay)}/วัน (${daysLeft} วัน)`);
   set('h-target-goal',fmt(tgt)+' เป้า');
 
-  // Cash In ใน Hero (cell ที่ 3 ข้างๆ กำไรสุทธิ + Margin)
-  set('h-cashin', fmt(cm.cashReceived));
+  // ช่องที่ 3 ข้างๆ กำไรสุทธิ + Margin — เดิมโชว์ Cash In ซ้ำกับตัวเลขใหญ่ ตอนนี้เป็น Net Revenue จริง
+  set('h-cashin', fmt(mtdNet));
 
+  // สองบรรทัดนี้เขียนว่า "ของ Net Revenue" จึงต้องหารด้วย Net Revenue จริง ไม่ใช่ Cash In
   set('sc-exp',fmt(cm.expenses));
-  set('sc-exp-sub',`${cm.revenue>0?(cm.expenses/cm.revenue*100).toFixed(1):0}% ของ Net Revenue`);
+  set('sc-exp-sub',`${mtdNet>0?(cm.expenses/mtdNet*100).toFixed(1):0}% ของ Net Revenue`);
   set('sc-pay',fmt(cm.therapistPay));
-  set('sc-pay-sub',`HR ${cm.revenue>0?(cm.therapistPay/cm.revenue*100).toFixed(1):0}% ของ Net Revenue · ${d.therapists.length} คน`);
+  set('sc-pay-sub',`HR ${mtdNet>0?(cm.therapistPay/mtdNet*100).toFixed(1):0}% ของ Net Revenue · ${d.therapists.length} คน`);
 
   set('sc-ytd-rev',fmt(d.ytd.revenue));
   const ytdPftEl=$('sc-ytd-pft');
