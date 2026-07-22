@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>บ้านกาแฟหอมละมุน — Dashboard ยอดขาย</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI', Tahoma, sans-serif; background:#f5efe6; color:#3b2a1a; padding:24px; }
+  h1 { font-size:1.5rem; margin-bottom:4px; }
+  .sub { color:#8a6f57; margin-bottom:20px; font-size:.9rem; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:22px; }
+  .kpi { background:#fff; border-radius:14px; padding:16px 18px; box-shadow:0 2px 8px rgba(74,44,23,.08); border-top:4px solid #4a2c17; }
+  .kpi .label { font-size:.8rem; color:#8a6f57; }
+  .kpi .value { font-size:1.5rem; font-weight:700; margin-top:4px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; }
+  .card { background:#fff; border-radius:14px; padding:18px; box-shadow:0 2px 8px rgba(74,44,23,.08); }
+  .card h2 { font-size:1rem; margin-bottom:14px; color:#4a2c17; }
+  .wide { grid-column:1/-1; }
+  .bar-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:.85rem; }
+  .bar-label { width:150px; text-align:right; color:#5c4433; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-track { flex:1; background:#f0e6d8; border-radius:6px; height:22px; }
+  .bar-fill { height:100%; border-radius:6px; background:linear-gradient(90deg,#8a5a33,#c08552); display:flex; align-items:center; justify-content:flex-end; padding-right:6px; color:#fff; font-size:.75rem; min-width:34px; }
+  .bar-fill.green { background:linear-gradient(90deg,#4b6b3c,#7ba05b); }
+  svg text { font-family:inherit; }
+  footer { margin-top:20px; font-size:.75rem; color:#a08a72; text-align:center; }
+</style>
+</head>
+<body>
+<h1>☕ บ้านกาแฟหอมละมุน — Dashboard ยอดขาย</h1>
+<div class="sub">ข้อมูล 1 มิถุนายน – 20 กรกฎาคม 2026 (ไฟล์ตัวอย่างสำหรับการสอน สร้างด้วย Claude Code)</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="grid">
+  <div class="card wide"><h2>ยอดขายรายวัน (บาท)</h2><div id="dailyChart"></div></div>
+  <div class="card"><h2>เมนูขายดี 5 อันดับ (จำนวนที่ขาย)</h2><div id="topQty"></div></div>
+  <div class="card"><h2>เมนูทำกำไรสูงสุด 5 อันดับ (บาท)</h2><div id="topProfit"></div></div>
+  <div class="card"><h2>สัดส่วนช่องทางขาย (บาท)</h2><div id="channel"></div></div>
+  <div class="card"><h2>ยอดขายรายชั่วโมง (บาท)</h2><div id="hourly"></div></div>
+</div>
+<footer>ข้อมูลสมมติเพื่อการสอนเท่านั้น</footer>
+
+<script>
+const DATA = {"kpi": {"sales": 83775, "bills": 1030, "avg": 81.3, "profit": 46682}, "daily": [{"d": "01/06", "v": 1555}, {"d": "02/06", "v": 1175}, {"d": "03/06", "v": 1785}, {"d": "04/06", "v": 1410}, {"d": "05/06", "v": 1585}, {"d": "06/06", "v": 2575}, {"d": "07/06", "v": 2635}, {"d": "08/06", "v": 1575}, {"d": "09/06", "v": 1360}, {"d": "10/06", "v": 1510}, {"d": "11/06", "v": 1255}, {"d": "12/06", "v": 1495}, {"d": "13/06", "v": 2000}, {"d": "14/06", "v": 2125}, {"d": "15/06", "v": 1375}, {"d": "16/06", "v": 1425}, {"d": "17/06", "v": 1415}, {"d": "18/06", "v": 1305}, {"d": "19/06", "v": 1425}, {"d": "20/06", "v": 2290}, {"d": "21/06", "v": 2065}, {"d": "22/06", "v": 1520}, {"d": "23/06", "v": 1310}, {"d": "24/06", "v": 985}, {"d": "25/06", "v": 1375}, {"d": "26/06", "v": 1280}, {"d": "27/06", "v": 2740}, {"d": "28/06", "v": 2310}, {"d": "29/06", "v": 1120}, {"d": "30/06", "v": 1505}, {"d": "01/07", "v": 1605}, {"d": "02/07", "v": 1195}, {"d": "03/07", "v": 1870}, {"d": "04/07", "v": 2155}, {"d": "05/07", "v": 2810}, {"d": "06/07", "v": 1570}, {"d": "07/07", "v": 1325}, {"d": "08/07", "v": 1230}, {"d": "09/07", "v": 950}, {"d": "10/07", "v": 1390}, {"d": "11/07", "v": 2330}, {"d": "12/07", "v": 2005}, {"d": "13/07", "v": 1410}, {"d": "14/07", "v": 1765}, {"d": "15/07", "v": 1580}, {"d": "16/07", "v": 1160}, {"d": "17/07", "v": 1505}, {"d": "18/07", "v": 2435}, {"d": "19/07", "v": 2500}, {"d": "20/07", "v": 1500}], "topQty": [{"n": "ชาไทยเย็น", "v": 237}, {"n": "อเมริกาโน่เย็น", "v": 185}, {"n": "มัทฉะลาเต้", "v": 147}, {"n": "ลาเต้เย็น", "v": 126}, {"n": "บราวนี่", "v": 94}], "topProfit": [{"n": "อเมริกาโน่เย็น", "v": 7400}, {"n": "มัทฉะลาเต้", "v": 6615}, {"n": "ชาไทยเย็น", "v": 6162}, {"n": "ลาเต้เย็น", "v": 5292}, {"n": "คาปูชิโน่", "v": 3486}], "channel": [{"n": "หน้าร้าน", "v": 56715}, {"n": "Grab", "v": 19705}, {"n": "LINE MAN", "v": 7355}], "hourly": [{"h": "07:00", "v": 11860}, {"h": "08:00", "v": 16290}, {"h": "09:00", "v": 13415}, {"h": "10:00", "v": 8005}, {"h": "11:00", "v": 4755}, {"h": "12:00", "v": 8770}, {"h": "13:00", "v": 5030}, {"h": "14:00", "v": 4280}, {"h": "15:00", "v": 4565}, {"h": "16:00", "v": 3330}, {"h": "17:00", "v": 3475}]};
+const fmt = n => n.toLocaleString('th-TH');
+
+const kpis = [
+  ['ยอดขายรวม', fmt(DATA.kpi.sales) + ' ฿'],
+  ['จำนวนบิล', fmt(DATA.kpi.bills)],
+  ['ยอดเฉลี่ยต่อบิล', fmt(DATA.kpi.avg) + ' ฿'],
+  ['กำไรรวม (หลังหักต้นทุน)', fmt(DATA.kpi.profit) + ' ฿'],
+];
+document.getElementById('kpis').innerHTML = kpis.map(([l,v]) =>
+  `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+
+function bars(el, rows, unit, cls='') {
+  const max = Math.max(...rows.map(r => r.v));
+  document.getElementById(el).innerHTML = rows.map(r =>
+    `<div class="bar-row"><div class="bar-label">${r.n}</div>
+     <div class="bar-track"><div class="bar-fill ${cls}" style="width:${(r.v/max*100).toFixed(1)}%">${fmt(r.v)}${unit}</div></div></div>`).join('');
+}
+bars('topQty', DATA.topQty, '');
+bars('topProfit', DATA.topProfit, '', 'green');
+bars('channel', DATA.channel, '');
+bars('hourly', DATA.hourly.map(r => ({n:r.h, v:r.v})), '');
+
+// daily line chart (SVG)
+(function() {
+  const d = DATA.daily, W = 1000, H = 240, P = 40;
+  const max = Math.max(...d.map(x => x.v));
+  const x = i => P + i * (W - P*2) / (d.length - 1);
+  const y = v => H - P - (v / max) * (H - P*2);
+  const pts = d.map((r,i) => `${x(i)},${y(r.v)}`).join(' ');
+  const area = `M${x(0)},${H-P} L` + pts.replace(/ /g,' L') + ` L${x(d.length-1)},${H-P} Z`;
+  let labels = '';
+  for (let i = 0; i < d.length; i += 7)
+    labels += `<text x="${x(i)}" y="${H-P+18}" font-size="11" fill="#8a6f57" text-anchor="middle">${d[i].d}</text>`;
+  let grid = '';
+  for (let g = 1; g <= 4; g++) {
+    const gy = y(max*g/4);
+    grid += `<line x1="${P}" y1="${gy}" x2="${W-P}" y2="${gy}" stroke="#eee2d2"/>` +
+            `<text x="${P-6}" y="${gy+4}" font-size="10" fill="#a08a72" text-anchor="end">${fmt(Math.round(max*g/4))}</text>`;
+  }
+  document.getElementById('dailyChart').innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" style="width:100%">
+      ${grid}
+      <path d="${area}" fill="rgba(138,90,51,.15)"/>
+      <polyline points="${pts}" fill="none" stroke="#8a5a33" stroke-width="2.5"/>
+      ${labels}
+    </svg>`;
+})();
+</script>
+</body>
+</html>
