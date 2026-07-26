@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minute Coffee — กาแฟดี ๆ ในทุกนาทีของคุณ</title>
+<meta name="description" content="Minute Coffee ร้านกาแฟ Specialty บรรยากาศอบอุ่น กาแฟคั่วสดใหม่ทุกวัน เครื่องดื่มและเบเกอรี่โฮมเมด">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F7F2EA;
+    --paper: #FFFDF9;
+    --espresso: #2B211A;
+    --mocha: #4A392C;
+    --caramel: #C08A4E;
+    --caramel-dark: #A06E35;
+    --latte: #E8DCC8;
+    --leaf: #5F7052;
+    --radius: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Anuphan', sans-serif;
+    background: var(--cream);
+    color: var(--espresso);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .serif { font-family: 'Fraunces', 'Anuphan', serif; }
+  img { max-width: 100%; display: block; }
+  a { color: inherit; text-decoration: none; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Nav ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(247, 242, 234, .92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(43, 33, 26, .08);
+  }
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 68px;
+  }
+  .logo {
+    font-family: 'Fraunces', serif;
+    font-weight: 700; font-size: 1.35rem; letter-spacing: .02em;
+  }
+  .logo span { color: var(--caramel); }
+  .nav-links { display: flex; gap: 28px; font-size: .95rem; font-weight: 500; }
+  .nav-links a { opacity: .8; transition: opacity .2s, color .2s; }
+  .nav-links a:hover { opacity: 1; color: var(--caramel-dark); }
+  .nav-cta {
+    background: var(--espresso); color: var(--cream);
+    padding: 9px 20px; border-radius: 999px; font-size: .9rem; font-weight: 600;
+    transition: background .2s;
+  }
+  .nav-cta:hover { background: var(--mocha); }
+  .menu-btn { display: none; background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--espresso); }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 84px 0 72px; overflow: hidden; }
+  .hero-grid {
+    display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center;
+  }
+  .kicker {
+    display: inline-block; font-size: .8rem; font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--caramel-dark);
+    border: 1px solid var(--caramel); border-radius: 999px; padding: 6px 16px;
+    margin-bottom: 22px; background: var(--paper);
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+    line-height: 1.15; font-weight: 700; margin-bottom: 20px;
+  }
+  .hero h1 em { font-style: italic; color: var(--caramel); }
+  .hero p.lead { font-size: 1.1rem; color: var(--mocha); max-width: 46ch; margin-bottom: 32px; }
+  .btn-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px; border-radius: 999px; font-weight: 600; font-size: 1rem;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: var(--caramel); color: #fff; box-shadow: 0 8px 24px rgba(192, 138, 78, .35); }
+  .btn-ghost { border: 1.5px solid var(--espresso); color: var(--espresso); background: transparent; }
+  .hero-visual {
+    background: linear-gradient(160deg, var(--latte), var(--caramel) 130%);
+    border-radius: 32px; aspect-ratio: 4 / 4.6; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 24px 60px rgba(43, 33, 26, .18);
+  }
+  .hero-visual .cup { font-size: clamp(5rem, 12vw, 8.5rem); filter: drop-shadow(0 14px 22px rgba(43,33,26,.25)); }
+  .hero-badge {
+    position: absolute; background: var(--paper); border-radius: 14px;
+    padding: 12px 18px; box-shadow: 0 10px 30px rgba(43, 33, 26, .15);
+    font-size: .85rem; font-weight: 600;
+  }
+  .hero-badge small { display: block; font-weight: 400; color: var(--mocha); font-size: .78rem; }
+  .badge-1 { top: 8%; left: -6%; }
+  .badge-2 { bottom: 10%; right: -5%; }
+
+  /* ---------- Marquee strip ---------- */
+  .strip {
+    background: var(--espresso); color: var(--latte);
+    padding: 14px 0; overflow: hidden; white-space: nowrap;
+  }
+  .strip-inner {
+    display: inline-block; animation: scroll 28s linear infinite;
+    font-family: 'Fraunces', serif; font-size: .95rem; letter-spacing: .06em;
+  }
+  .strip-inner span { margin: 0 26px; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ---------- Sections ---------- */
+  section { padding: 88px 0; }
+  .section-head { text-align: center; max-width: 620px; margin: 0 auto 56px; }
+  .section-head .kicker { margin-bottom: 16px; }
+  .section-head h2 { font-size: clamp(1.9rem, 4vw, 2.6rem); margin-bottom: 14px; }
+  .section-head p { color: var(--mocha); }
+
+  /* ---------- About ---------- */
+  .about-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .about-card {
+    background: var(--paper); border-radius: var(--radius); padding: 34px 28px;
+    border: 1px solid rgba(43, 33, 26, .07);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .about-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(43, 33, 26, .1); }
+  .about-card .icon {
+    width: 54px; height: 54px; border-radius: 14px; background: var(--latte);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; margin-bottom: 18px;
+  }
+  .about-card h3 { font-size: 1.15rem; margin-bottom: 8px; }
+  .about-card p { font-size: .95rem; color: var(--mocha); }
+
+  /* ---------- Menu ---------- */
+  #menu { background: var(--paper); }
+  .menu-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 40px; flex-wrap: wrap; }
+  .tab {
+    border: 1.5px solid rgba(43, 33, 26, .18); background: transparent;
+    padding: 9px 22px; border-radius: 999px; font-family: 'Anuphan', sans-serif;
+    font-size: .95rem; font-weight: 500; cursor: pointer; color: var(--espresso);
+    transition: all .2s;
+  }
+  .tab.active, .tab:hover { background: var(--espresso); color: var(--cream); border-color: var(--espresso); }
+  .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 40px; max-width: 860px; margin: 0 auto; }
+  .menu-item {
+    display: flex; align-items: baseline; gap: 12px; padding: 16px 6px;
+    border-bottom: 1px dashed rgba(43, 33, 26, .18);
+  }
+  .menu-item .name { font-weight: 600; }
+  .menu-item .name small { display: block; font-weight: 400; color: var(--mocha); font-size: .82rem; }
+  .menu-item .dots { flex: 1; }
+  .menu-item .price { font-family: 'Fraunces', serif; font-weight: 600; color: var(--caramel-dark); white-space: nowrap; }
+  .menu-note { text-align: center; margin-top: 34px; font-size: .9rem; color: var(--mocha); }
+
+  /* ---------- Hours & Location ---------- */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .info-card {
+    background: var(--paper); border-radius: var(--radius); padding: 38px 34px;
+    border: 1px solid rgba(43, 33, 26, .07);
+  }
+  .info-card h3 { font-size: 1.3rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .hours-row {
+    display: flex; justify-content: space-between; padding: 10px 0;
+    border-bottom: 1px dashed rgba(43, 33, 26, .14); font-size: .97rem;
+  }
+  .hours-row:last-child { border-bottom: none; }
+  .hours-row .day { color: var(--mocha); }
+  .hours-row .time { font-weight: 600; }
+  .info-card p.addr { color: var(--mocha); margin-bottom: 18px; }
+  .contact-list { list-style: none; }
+  .contact-list li { display: flex; gap: 12px; padding: 8px 0; align-items: center; }
+  .contact-list .ic { width: 38px; height: 38px; border-radius: 10px; background: var(--latte); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* ---------- CTA ---------- */
+  .cta {
+    background: var(--espresso); color: var(--cream);
+    border-radius: 28px; padding: 64px 40px; text-align: center;
+  }
+  .cta h2 { font-size: clamp(1.8rem, 4vw, 2.4rem); margin-bottom: 12px; }
+  .cta h2 em { font-style: italic; color: var(--caramel); }
+  .cta p { color: var(--latte); margin-bottom: 30px; max-width: 48ch; margin-left: auto; margin-right: auto; }
+
+  /* ---------- Footer ---------- */
+  footer { padding: 44px 0 36px; }
+  .footer-inner {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px; font-size: .9rem; color: var(--mocha);
+  }
+  .socials { display: flex; gap: 14px; }
+  .socials a {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--paper);
+    border: 1px solid rgba(43, 33, 26, .12);
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s, transform .2s;
+  }
+  .socials a:hover { background: var(--latte); transform: translateY(-2px); }
+
+  /* ---------- Reveal animation ---------- */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+    .hero-visual { max-width: 420px; margin: 0 auto; }
+    .badge-1 { left: 2%; } .badge-2 { right: 2%; }
+    .about-grid { grid-template-columns: 1fr; }
+    .menu-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+    .nav-links {
+      display: none; position: absolute; top: 68px; left: 0; right: 0;
+      background: var(--cream); flex-direction: column; padding: 20px 24px;
+      border-bottom: 1px solid rgba(43, 33, 26, .1); gap: 16px;
+    }
+    .nav-links.open { display: flex; }
+    .menu-btn { display: block; }
+    section { padding: 64px 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container nav">
+    <a href="#" class="logo">Minute <span>Coffee</span> ☕</a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#about">เกี่ยวกับเรา</a>
+      <a href="#menu">เมนู</a>
+      <a href="#visit">เวลาเปิด–ปิด</a>
+      <a href="#contact">ติดต่อ</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <a href="#menu" class="nav-cta">ดูเมนู</a>
+      <button class="menu-btn" id="menuBtn" aria-label="เปิดเมนู">☰</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="kicker">Specialty Coffee &amp; Homemade Bakery</span>
+      <h1>กาแฟดี ๆ<br>ใน<em>ทุกนาที</em>ของคุณ</h1>
+      <p class="lead">Minute Coffee คั่วสดใหม่ทุกสัปดาห์ ชงด้วยความใส่ใจทุกแก้ว
+      ไม่ว่าจะเป็นนาทีเร่งรีบยามเช้า หรือนาทีพักผ่อนยามบ่าย — เราอยากให้นาทีนั้นเป็นนาทีที่ดีของคุณ</p>
+      <div class="btn-row">
+        <a href="#menu" class="btn btn-primary">ดูเมนูทั้งหมด →</a>
+        <a href="#visit" class="btn btn-ghost">แวะมาหาเรา</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="cup">☕</div>
+      <div class="hero-badge badge-1">⭐ 4.9 / 5<small>รีวิวจากลูกค้ากว่า 500 คน</small></div>
+      <div class="hero-badge badge-2">🌱 Single Origin<small>เมล็ดคัดพิเศษจากเกษตรกรไทย</small></div>
+    </div>
+  </div>
+</section>
+
+<div class="strip" aria-hidden="true">
+  <div class="strip-inner">
+    <span>FRESHLY ROASTED</span><span>✦</span><span>SPECIALTY COFFEE</span><span>✦</span><span>HOMEMADE BAKERY</span><span>✦</span><span>SLOW BAR</span><span>✦</span><span>MINUTE COFFEE</span><span>✦</span>
+    <span>FRESHLY ROASTED</span><span>✦</span><span>SPECIALTY COFFEE</span><span>✦</span><span>HOMEMADE BAKERY</span><span>✦</span><span>SLOW BAR</span><span>✦</span><span>MINUTE COFFEE</span><span>✦</span>
+  </div>
+</div>
+
+<section id="about">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Why Minute Coffee</span>
+      <h2>ทำไมต้องแวะมาที่นี่</h2>
+      <p>เพราะกาแฟที่ดีไม่ได้มีแค่รสชาติ แต่คือประสบการณ์ตั้งแต่ก้าวแรกที่เข้าร้าน</p>
+    </div>
+    <div class="about-grid">
+      <div class="about-card reveal">
+        <div class="icon">🫘</div>
+        <h3>เมล็ดคั่วสดใหม่</h3>
+        <p>คัดเมล็ด Single Origin จากดอยไทยและแหล่งปลูกชั้นนำ คั่วสดทุกสัปดาห์เพื่อรสชาติที่ดีที่สุดในทุกแก้ว</p>
+      </div>
+      <div class="about-card reveal">
+        <div class="icon">🥐</div>
+        <h3>เบเกอรี่โฮมเมด</h3>
+        <p>ครัวซองต์และขนมอบสดใหม่จากเตาทุกเช้า อบวันต่อวัน คู่กาแฟที่ลงตัวที่สุด</p>
+      </div>
+      <div class="about-card reveal">
+        <div class="icon">🛋️</div>
+        <h3>บรรยากาศอบอุ่น</h3>
+        <p>มุมนั่งสบาย แสงธรรมชาติ Wi-Fi ฟรี และปลั๊กทุกโต๊ะ — เหมาะทั้งนั่งทำงานและนั่งชิลกับเพื่อน</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="menu">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Our Menu</span>
+      <h2>เมนูของเรา</h2>
+      <p>ทุกแก้วเลือกได้ทั้งร้อน / เย็น / ปั่น เมล็ดกาแฟเลือกได้ระหว่างคั่วกลางและคั่วเข้ม</p>
+    </div>
+    <div class="menu-tabs" role="tablist">
+      <button class="tab active" data-cat="coffee">☕ กาแฟ</button>
+      <button class="tab" data-cat="noncoffee">🍵 Non-Coffee</button>
+      <button class="tab" data-cat="bakery">🥐 เบเกอรี่</button>
+    </div>
+    <div class="menu-grid" id="menuGrid"></div>
+    <p class="menu-note">* ราคาเย็น +10.- / ปั่น +15.- · เปลี่ยนนมโอ๊ต +15.-</p>
+  </div>
+</section>
+
+<section id="visit" style="padding-top: 0;">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Visit Us</span>
+      <h2>เวลาเปิด–ปิด &amp; ที่ตั้งร้าน</h2>
+    </div>
+    <div class="info-grid">
+      <div class="info-card reveal">
+        <h3>🕐 เวลาทำการ</h3>
+        <div class="hours-row"><span class="day">จันทร์ – ศุกร์</span><span class="time">07:00 – 18:00</span></div>
+        <div class="hours-row"><span class="day">เสาร์ – อาทิตย์</span><span class="time">08:00 – 19:00</span></div>
+        <div class="hours-row"><span class="day">วันหยุดนักขัตฤกษ์</span><span class="time">08:00 – 17:00</span></div>
+      </div>
+      <div class="info-card reveal" id="contact">
+        <h3>📍 ติดต่อเรา</h3>
+        <p class="addr">Minute Coffee<br>กรุงเทพมหานคร ประเทศไทย</p>
+        <ul class="contact-list">
+          <li><span class="ic">📞</span> <span>08x-xxx-xxxx</span></li>
+          <li><span class="ic">💬</span> <span>LINE: @minutecoffee</span></li>
+          <li><span class="ic">📸</span> <span>Instagram: @minute.coffee</span></li>
+          <li><span class="ic">🗺️</span> <a href="#" style="text-decoration: underline;">เปิดใน Google Maps</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top: 0;">
+  <div class="container">
+    <div class="cta reveal">
+      <h2>นาทีนี้… ได้เวลา<em>กาแฟดี ๆ</em> แล้ว</h2>
+      <p>สั่งล่วงหน้าผ่าน LINE แล้วมารับได้เลย ไม่ต้องรอคิว หรือแวะมานั่งชิลที่ร้านก็ยินดีต้อนรับเสมอ</p>
+      <a href="#contact" class="btn btn-primary">สั่งผ่าน LINE เลย 💬</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-inner">
+    <div>© 2026 Minute Coffee — Brewed with ❤️ every minute.</div>
+    <div class="socials">
+      <a href="#" aria-label="Facebook">📘</a>
+      <a href="#" aria-label="Instagram">📸</a>
+      <a href="#" aria-label="LINE">💬</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const MENU = {
+    coffee: [
+      { name: 'Espresso', th: 'เอสเพรสโซ่', price: 55 },
+      { name: 'Americano', th: 'อเมริกาโน่', price: 60 },
+      { name: 'Latte', th: 'ลาเต้', price: 70 },
+      { name: 'Cappuccino', th: 'คาปูชิโน่', price: 70 },
+      { name: 'Mocha', th: 'มอคค่า', price: 75 },
+      { name: 'Caramel Macchiato', th: 'คาราเมล มัคคิอาโต้', price: 80 },
+      { name: 'Dirty', th: 'เดอร์ตี้ — นมเย็น + ช็อตเข้ม', price: 85 },
+      { name: 'Es-Yen', th: 'เอสเย็น สูตรไทยเข้มข้น', price: 65 },
+      { name: 'Orange Coffee', th: 'กาแฟส้ม สดชื่นซาบซ่า', price: 85 },
+      { name: 'Cold Brew', th: 'สกัดเย็น 18 ชั่วโมง', price: 90 },
+    ],
+    noncoffee: [
+      { name: 'Matcha Latte', th: 'มัทฉะลาเต้ เกรดพิธีการ', price: 85 },
+      { name: 'Thai Milk Tea', th: 'ชาไทยเข้มข้น', price: 65 },
+      { name: 'Cocoa', th: 'โกโก้เข้ม ๆ', price: 65 },
+      { name: 'Fresh Milk Caramel', th: 'นมสดคาราเมล', price: 60 },
+      { name: 'Lemon Honey Soda', th: 'โซดาน้ำผึ้งมะนาว', price: 60 },
+      { name: 'Butterfly Pea Lemonade', th: 'อัญชันมะนาว', price: 60 },
+    ],
+    bakery: [
+      { name: 'Butter Croissant', th: 'ครัวซองต์เนยสด อบใหม่ทุกเช้า', price: 75 },
+      { name: 'Almond Croissant', th: 'ครัวซองต์อัลมอนด์', price: 95 },
+      { name: 'Banana Bread', th: 'ขนมปังกล้วยหอมโฮมเมด', price: 65 },
+      { name: 'Basque Cheesecake', th: 'บาสก์ชีสเค้กหน้าไหม้', price: 110 },
+      { name: 'Brownie', th: 'บราวนี่เข้มข้น', price: 70 },
+      { name: 'Butter Cookie', th: 'คุกกี้เนยสด (3 ชิ้น)', price: 45 },
+    ],
+  };
+
+  const grid = document.getElementById('menuGrid');
+  function renderMenu(cat) {
+    grid.innerHTML = MENU[cat].map(item => `
+      <div class="menu-item">
+        <div class="name">${item.name}<small>${item.th}</small></div>
+        <div class="dots"></div>
+        <div class="price">${item.price}.-</div>
+      </div>`).join('');
+  }
+  renderMenu('coffee');
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderMenu(tab.dataset.cat);
+    });
+  });
+
+  const menuBtn = document.getElementById('menuBtn');
+  const navLinks = document.getElementById('navLinks');
+  menuBtn.addEventListener('click', () => navLinks.classList.toggle('open'));
+  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navLinks.classList.remove('open')));
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
