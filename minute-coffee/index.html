@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Minute Coffee — กาแฟดี ๆ ในทุกนาทีของคุณ</title>
-<meta name="description" content="Minute Coffee ร้านกาแฟ Specialty บรรยากาศอบอุ่น กาแฟคั่วสดใหม่ทุกวัน เครื่องดื่มและเบเกอรี่โฮมเมด">
+<title>Minute Coffee By An Hour — กาแฟดี ๆ ในทุกนาทีของคุณ</title>
+<meta name="description" content="Minute Coffee By An Hour ร้านกาแฟหลายสาขาในห้างและอาคารสำนักงานทั่วกรุงเทพฯ เลือกคั่วกาแฟและระดับความหวานได้เอง สั่งง่าย รับไว ทุกนาทีของคุณ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
@@ -48,8 +48,14 @@
   .logo {
     font-family: 'Fraunces', serif;
     font-weight: 700; font-size: 1.35rem; letter-spacing: .02em;
+    line-height: 1.15;
   }
   .logo span { color: var(--caramel); }
+  .logo .sub {
+    display: block; font-family: 'Anuphan', sans-serif; font-weight: 500;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--mocha); opacity: .75;
+  }
   .nav-links { display: flex; gap: 28px; font-size: .95rem; font-weight: 500; }
   .nav-links a { opacity: .8; transition: opacity .2s, color .2s; }
   .nav-links a:hover { opacity: 1; color: var(--caramel-dark); }
@@ -157,9 +163,21 @@
   .menu-item .name small { display: block; font-weight: 400; color: var(--mocha); font-size: .82rem; }
   .menu-item .dots { flex: 1; }
   .menu-item .price { font-family: 'Fraunces', serif; font-weight: 600; color: var(--caramel-dark); white-space: nowrap; }
+  .menu-item .price.tag { font-family: 'Anuphan', sans-serif; font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; background: var(--latte); padding: 4px 10px; border-radius: 999px; }
   .menu-note { text-align: center; margin-top: 34px; font-size: .9rem; color: var(--mocha); }
 
-  /* ---------- Hours & Location ---------- */
+  /* ---------- Branches & Contact ---------- */
+  .branch-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 40px; }
+  .branch-card {
+    background: var(--paper); border-radius: var(--radius); padding: 26px 28px;
+    border: 1px solid rgba(43, 33, 26, .07);
+  }
+  .branch-card h4 { font-size: 1.05rem; margin-bottom: 6px; }
+  .branch-card p { font-size: .9rem; color: var(--mocha); }
+  .branch-note {
+    text-align: center; font-size: .9rem; color: var(--mocha);
+    max-width: 60ch; margin: 0 auto 56px;
+  }
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
   .info-card {
     background: var(--paper); border-radius: var(--radius); padding: 38px 34px;
@@ -213,6 +231,7 @@
     .badge-1 { left: 2%; } .badge-2 { right: 2%; }
     .about-grid { grid-template-columns: 1fr; }
     .menu-grid { grid-template-columns: 1fr; }
+    .branch-grid { grid-template-columns: 1fr; }
     .info-grid { grid-template-columns: 1fr; }
     .nav-links {
       display: none; position: absolute; top: 68px; left: 0; right: 0;
@@ -229,11 +248,11 @@
 
 <header>
   <div class="container nav">
-    <a href="#" class="logo">Minute <span>Coffee</span> ☕</a>
+    <a href="#" class="logo">Minute <span>Coffee</span> ☕<span class="sub">by An Hour</span></a>
     <nav class="nav-links" id="navLinks">
       <a href="#about">เกี่ยวกับเรา</a>
       <a href="#menu">เมนู</a>
-      <a href="#visit">เวลาเปิด–ปิด</a>
+      <a href="#visit">สาขาของเรา</a>
       <a href="#contact">ติดต่อ</a>
     </nav>
     <div style="display:flex; align-items:center; gap:14px;">
@@ -246,27 +265,27 @@
 <section class="hero">
   <div class="container hero-grid">
     <div>
-      <span class="kicker">Specialty Coffee &amp; Homemade Bakery</span>
+      <span class="kicker">Coffee Kiosk in Malls &amp; Office Towers</span>
       <h1>กาแฟดี ๆ<br>ใน<em>ทุกนาที</em>ของคุณ</h1>
-      <p class="lead">Minute Coffee คั่วสดใหม่ทุกสัปดาห์ ชงด้วยความใส่ใจทุกแก้ว
-      ไม่ว่าจะเป็นนาทีเร่งรีบยามเช้า หรือนาทีพักผ่อนยามบ่าย — เราอยากให้นาทีนั้นเป็นนาทีที่ดีของคุณ</p>
+      <p class="lead">Minute Coffee By An Hour ร้านกาแฟที่แทรกตัวอยู่ในห้างและอาคารสำนักงานทั่วกรุงเทพฯ
+      เลือกระดับการคั่วและความหวานได้เอง สั่งง่าย รอไม่นาน เพราะทุกนาทีของคุณมีค่า</p>
       <div class="btn-row">
-        <a href="#menu" class="btn btn-primary">ดูเมนูทั้งหมด →</a>
-        <a href="#visit" class="btn btn-ghost">แวะมาหาเรา</a>
+        <a href="#menu" class="btn btn-primary">ดูเมนูแนะนำ →</a>
+        <a href="#visit" class="btn btn-ghost">ดูสาขาใกล้คุณ</a>
       </div>
     </div>
     <div class="hero-visual">
       <div class="cup">☕</div>
-      <div class="hero-badge badge-1">⭐ 4.9 / 5<small>รีวิวจากลูกค้ากว่า 500 คน</small></div>
-      <div class="hero-badge badge-2">🌱 Single Origin<small>เมล็ดคัดพิเศษจากเกษตรกรไทย</small></div>
+      <div class="hero-badge badge-1">📸 2,120+ Followers<small>ติดตามเราบน Instagram</small></div>
+      <div class="hero-badge badge-2">🏢 หลายสาขา<small>ในห้าง &amp; อาคารสำนักงานทั่วกรุงเทพฯ</small></div>
     </div>
   </div>
 </section>
 
 <div class="strip" aria-hidden="true">
   <div class="strip-inner">
-    <span>FRESHLY ROASTED</span><span>✦</span><span>SPECIALTY COFFEE</span><span>✦</span><span>HOMEMADE BAKERY</span><span>✦</span><span>SLOW BAR</span><span>✦</span><span>MINUTE COFFEE</span><span>✦</span>
-    <span>FRESHLY ROASTED</span><span>✦</span><span>SPECIALTY COFFEE</span><span>✦</span><span>HOMEMADE BAKERY</span><span>✦</span><span>SLOW BAR</span><span>✦</span><span>MINUTE COFFEE</span><span>✦</span>
+    <span>MINUTE COFFEE BY AN HOUR</span><span>✦</span><span>เลือกคั่วได้ 3 ระดับ</span><span>✦</span><span>ปรับหวานได้ 5 ระดับ</span><span>✦</span><span>หลายสาขาทั่วกรุงเทพฯ</span><span>✦</span>
+    <span>MINUTE COFFEE BY AN HOUR</span><span>✦</span><span>เลือกคั่วได้ 3 ระดับ</span><span>✦</span><span>ปรับหวานได้ 5 ระดับ</span><span>✦</span><span>หลายสาขาทั่วกรุงเทพฯ</span><span>✦</span>
   </div>
 </div>
 
@@ -275,23 +294,23 @@
     <div class="section-head reveal">
       <span class="kicker">Why Minute Coffee</span>
       <h2>ทำไมต้องแวะมาที่นี่</h2>
-      <p>เพราะกาแฟที่ดีไม่ได้มีแค่รสชาติ แต่คือประสบการณ์ตั้งแต่ก้าวแรกที่เข้าร้าน</p>
+      <p>เพราะกาแฟดีไม่ต้องรอนาน แค่แวะระหว่างทางในห้างหรือออฟฟิศที่คุณอยู่ทุกวัน</p>
     </div>
     <div class="about-grid">
       <div class="about-card reveal">
         <div class="icon">🫘</div>
-        <h3>เมล็ดคั่วสดใหม่</h3>
-        <p>คัดเมล็ด Single Origin จากดอยไทยและแหล่งปลูกชั้นนำ คั่วสดทุกสัปดาห์เพื่อรสชาติที่ดีที่สุดในทุกแก้ว</p>
+        <h3>เลือกคั่วได้เอง 3 ระดับ</h3>
+        <p>คั่วเข้ม คั่วกลางเข้ม หรือคั่วอ่อน (+5.-) เลือกได้ตามสไตล์การดื่มกาแฟของคุณในแก้วเดียว</p>
       </div>
       <div class="about-card reveal">
-        <div class="icon">🥐</div>
-        <h3>เบเกอรี่โฮมเมด</h3>
-        <p>ครัวซองต์และขนมอบสดใหม่จากเตาทุกเช้า อบวันต่อวัน คู่กาแฟที่ลงตัวที่สุด</p>
+        <div class="icon">🍬</div>
+        <h3>ปรับหวานได้ 5 ระดับ</h3>
+        <p>ไม่หวาน ไปจนถึงหวานเต็มที่ เลือกความหวานได้ตามใจ ทุกแก้วชงสดใหม่ตามสั่ง</p>
       </div>
       <div class="about-card reveal">
-        <div class="icon">🛋️</div>
-        <h3>บรรยากาศอบอุ่น</h3>
-        <p>มุมนั่งสบาย แสงธรรมชาติ Wi-Fi ฟรี และปลั๊กทุกโต๊ะ — เหมาะทั้งนั่งทำงานและนั่งชิลกับเพื่อน</p>
+        <div class="icon">🏢</div>
+        <h3>ใกล้คุณกว่าที่คิด</h3>
+        <p>แทรกตัวอยู่ในห้างและอาคารสำนักงานทั่วกรุงเทพฯ แวะซื้อระหว่างทางได้ ไม่ต้องเสียเวลาเดินทาง</p>
       </div>
     </div>
   </div>
@@ -300,9 +319,9 @@
 <section id="menu">
   <div class="container">
     <div class="section-head reveal">
-      <span class="kicker">Our Menu</span>
-      <h2>เมนูของเรา</h2>
-      <p>ทุกแก้วเลือกได้ทั้งร้อน / เย็น / ปั่น เมล็ดกาแฟเลือกได้ระหว่างคั่วกลางและคั่วเข้ม</p>
+      <span class="kicker">เมนูแนะนำจากรีวิวลูกค้า</span>
+      <h2>เมนูยอดนิยม</h2>
+      <p>รวมเมนูที่ลูกค้ารีวิวชมบ่อยที่สุด — เมนูเต็มและราคาอาจต่างกันเล็กน้อยในแต่ละสาขา สอบถามได้ที่หน้าร้าน</p>
     </div>
     <div class="menu-tabs" role="tablist">
       <button class="tab active" data-cat="coffee">☕ กาแฟ</button>
@@ -310,7 +329,7 @@
       <button class="tab" data-cat="bakery">🥐 เบเกอรี่</button>
     </div>
     <div class="menu-grid" id="menuGrid"></div>
-    <p class="menu-note">* ราคาเย็น +10.- / ปั่น +15.- · เปลี่ยนนมโอ๊ต +15.-</p>
+    <p class="menu-note">* เลือกคั่วกาแฟได้ 3 ระดับ (เข้ม / กลางเข้ม / อ่อน +5.-) และปรับความหวานได้ 5 ระดับทุกแก้ว</p>
   </div>
 </section>
 
@@ -318,24 +337,41 @@
   <div class="container">
     <div class="section-head reveal">
       <span class="kicker">Visit Us</span>
-      <h2>เวลาเปิด–ปิด &amp; ที่ตั้งร้าน</h2>
+      <h2>สาขาของเรา</h2>
+      <p>Minute Coffee By An Hour แทรกตัวอยู่ในห้างและอาคารสำนักงานทั่วกรุงเทพฯ นี่คือบางส่วนของสาขาที่เปิดให้บริการ</p>
     </div>
-    <div class="info-grid">
+    <div class="branch-grid">
+      <div class="branch-card reveal">
+        <h4>📍 จามจุรีสแควร์</h4>
+        <p>ชั้น G โซนอาคารสำนักงาน ตรงข้ามธนาคารไทยพาณิชย์ ถ.พระราม 4 เขตปทุมวัน</p>
+      </div>
+      <div class="branch-card reveal">
+        <h4>📍 G Tower พระราม 9</h4>
+        <p>ชั้น G เลขที่ 33/4 ถ.พระราม 9 เขตห้วยขวาง</p>
+      </div>
+      <div class="branch-card reveal">
+        <h4>📍 True Digital Park</h4>
+        <p>ในโซน Lotus's Eatery ชั้น 2 สุขุมวิท ซอย 101/1 เขตพระโขนง</p>
+      </div>
+      <div class="branch-card reveal">
+        <h4>📍 Lotus's นวมินทร์</h4>
+        <p>ภายในโลตัส สาขานวมินทร์ ถ.สุขาภิบาล 1</p>
+      </div>
+    </div>
+    <p class="branch-note reveal">* และยังมีสาขาอื่นเปิดให้บริการเพิ่มเติมทั่วกรุงเทพฯ ติดตามสาขาใหม่ล่าสุดได้ทาง Instagram · เวลาเปิด–ปิดของแต่ละสาขาเป็นไปตามเวลาทำการของห้าง/อาคารที่ตั้งอยู่</p>
+    <div class="info-grid" id="contact">
+      <div class="info-card reveal">
+        <h3>📞 ติดต่อเรา</h3>
+        <ul class="contact-list">
+          <li><span class="ic">📞</span> <a href="tel:0646917989">064-691-7989</a></li>
+          <li><span class="ic">📸</span> <a href="https://www.instagram.com/minutecoffee.anhour/" target="_blank" rel="noopener">Instagram: @minutecoffee.anhour</a></li>
+          <li><span class="ic">📘</span> <a href="https://www.facebook.com/minutecoffee.anhour/" target="_blank" rel="noopener">Facebook: Minute Coffee By AN HOUR</a></li>
+        </ul>
+      </div>
       <div class="info-card reveal">
         <h3>🕐 เวลาทำการ</h3>
-        <div class="hours-row"><span class="day">จันทร์ – ศุกร์</span><span class="time">07:00 – 18:00</span></div>
-        <div class="hours-row"><span class="day">เสาร์ – อาทิตย์</span><span class="time">08:00 – 19:00</span></div>
-        <div class="hours-row"><span class="day">วันหยุดนักขัตฤกษ์</span><span class="time">08:00 – 17:00</span></div>
-      </div>
-      <div class="info-card reveal" id="contact">
-        <h3>📍 ติดต่อเรา</h3>
-        <p class="addr">Minute Coffee<br>กรุงเทพมหานคร ประเทศไทย</p>
-        <ul class="contact-list">
-          <li><span class="ic">📞</span> <span>08x-xxx-xxxx</span></li>
-          <li><span class="ic">💬</span> <span>LINE: @minutecoffee</span></li>
-          <li><span class="ic">📸</span> <span>Instagram: @minute.coffee</span></li>
-          <li><span class="ic">🗺️</span> <a href="#" style="text-decoration: underline;">เปิดใน Google Maps</a></li>
-        </ul>
+        <p class="addr">แต่ละสาขาตั้งอยู่ในห้างสรรพสินค้าและอาคารสำนักงาน จึงเปิด–ปิดตามเวลาทำการของสถานที่นั้น ๆ</p>
+        <p class="addr">เช็กเวลาล่าสุดของแต่ละสาขาได้ทาง Instagram หรือ Facebook ก่อนแวะมาเสมอ</p>
       </div>
     </div>
   </div>
@@ -345,52 +381,40 @@
   <div class="container">
     <div class="cta reveal">
       <h2>นาทีนี้… ได้เวลา<em>กาแฟดี ๆ</em> แล้ว</h2>
-      <p>สั่งล่วงหน้าผ่าน LINE แล้วมารับได้เลย ไม่ต้องรอคิว หรือแวะมานั่งชิลที่ร้านก็ยินดีต้อนรับเสมอ</p>
-      <a href="#contact" class="btn btn-primary">สั่งผ่าน LINE เลย 💬</a>
+      <p>แวะสาขาใกล้คุณในห้างหรือออฟฟิศที่ไปทุกวัน เลือกคั่ว เลือกหวานได้เอง รับสดใหม่ทุกแก้ว</p>
+      <a href="https://www.instagram.com/minutecoffee.anhour/" target="_blank" rel="noopener" class="btn btn-primary">ติดตามเราบน Instagram 📸</a>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="container footer-inner">
-    <div>© 2026 Minute Coffee — Brewed with ❤️ every minute.</div>
+    <div>© 2026 Minute Coffee By An Hour — Brewed with ❤️ every minute.</div>
     <div class="socials">
-      <a href="#" aria-label="Facebook">📘</a>
-      <a href="#" aria-label="Instagram">📸</a>
-      <a href="#" aria-label="LINE">💬</a>
+      <a href="https://www.facebook.com/minutecoffee.anhour/" target="_blank" rel="noopener" aria-label="Facebook">📘</a>
+      <a href="https://www.instagram.com/minutecoffee.anhour/" target="_blank" rel="noopener" aria-label="Instagram">📸</a>
+      <a href="tel:0646917989" aria-label="โทร">📞</a>
     </div>
   </div>
 </footer>
 
 <script>
+  // เมนูและราคารวบรวมจากรีวิวลูกค้าจริงบน Wongnai/Instagram — ไม่ใช่เมนูฉบับเต็มของร้าน
   const MENU = {
     coffee: [
-      { name: 'Espresso', th: 'เอสเพรสโซ่', price: 55 },
-      { name: 'Americano', th: 'อเมริกาโน่', price: 60 },
-      { name: 'Latte', th: 'ลาเต้', price: 70 },
-      { name: 'Cappuccino', th: 'คาปูชิโน่', price: 70 },
-      { name: 'Mocha', th: 'มอคค่า', price: 75 },
-      { name: 'Caramel Macchiato', th: 'คาราเมล มัคคิอาโต้', price: 80 },
-      { name: 'Dirty', th: 'เดอร์ตี้ — นมเย็น + ช็อตเข้ม', price: 85 },
-      { name: 'Es-Yen', th: 'เอสเย็น สูตรไทยเข้มข้น', price: 65 },
-      { name: 'Orange Coffee', th: 'กาแฟส้ม สดชื่นซาบซ่า', price: 85 },
-      { name: 'Cold Brew', th: 'สกัดเย็น 18 ชั่วโมง', price: 90 },
+      { name: 'Iced Espresso', th: 'เอสเพรสโซ่เย็น', price: 59 },
+      { name: 'Coconut Americano', th: 'อเมริกาโน่มะพร้าว', price: 79 },
+      { name: 'Iced Coconut Latte', th: 'ลาเต้มะพร้าวเย็น', price: null },
     ],
     noncoffee: [
-      { name: 'Matcha Latte', th: 'มัทฉะลาเต้ เกรดพิธีการ', price: 85 },
-      { name: 'Thai Milk Tea', th: 'ชาไทยเข้มข้น', price: 65 },
-      { name: 'Cocoa', th: 'โกโก้เข้ม ๆ', price: 65 },
-      { name: 'Fresh Milk Caramel', th: 'นมสดคาราเมล', price: 60 },
-      { name: 'Lemon Honey Soda', th: 'โซดาน้ำผึ้งมะนาว', price: 60 },
-      { name: 'Butterfly Pea Lemonade', th: 'อัญชันมะนาว', price: 60 },
+      { name: 'Iced Green Tea', th: 'ชาเขียวเย็น', price: 65 },
+      { name: 'Iced Matcha Latte', th: 'มัทฉะลาเต้เย็น', price: null },
     ],
     bakery: [
-      { name: 'Butter Croissant', th: 'ครัวซองต์เนยสด อบใหม่ทุกเช้า', price: 75 },
-      { name: 'Almond Croissant', th: 'ครัวซองต์อัลมอนด์', price: 95 },
-      { name: 'Banana Bread', th: 'ขนมปังกล้วยหอมโฮมเมด', price: 65 },
-      { name: 'Basque Cheesecake', th: 'บาสก์ชีสเค้กหน้าไหม้', price: 110 },
-      { name: 'Brownie', th: 'บราวนี่เข้มข้น', price: 70 },
-      { name: 'Butter Cookie', th: 'คุกกี้เนยสด (3 ชิ้น)', price: 45 },
+      { name: 'Cranberry Cheese Tart', th: 'ทาร์ตชีสแครนเบอร์รี่', price: null },
+      { name: 'Italian Crispy Bread', th: 'ขนมปังกรอบอิตาเลียนหน้าแครนเบอร์รี่', price: null },
+      { name: 'Almond Cookie', th: 'คุกกี้อัลมอนด์', price: null },
+      { name: 'Fruit Cookie', th: 'คุกกี้ผลไม้', price: null },
     ],
   };
 
@@ -400,7 +424,7 @@
       <div class="menu-item">
         <div class="name">${item.name}<small>${item.th}</small></div>
         <div class="dots"></div>
-        <div class="price">${item.price}.-</div>
+        <div class="price${item.price === null ? ' tag' : ''}">${item.price === null ? 'Best Seller' : item.price + '.-'}</div>
       </div>`).join('');
   }
   renderMenu('coffee');
